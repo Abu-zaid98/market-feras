@@ -15,7 +15,7 @@ export async function exportBackup(): Promise<void> {
   const backup = {
     version: 1,
     exportedAt: new Date().toISOString(),
-    storeName: 'مول بالطول',
+    storeName: 'POS System',
     data: { products, customers, invoices, payments, settings },
   }
 

@@ -69,6 +69,72 @@ export async function updateCustomer(id: number, data: Partial<Customer>) {
   return db.customers.update(id, data)
 }
 
+/** Add an off-invoice debt and retain it as a visible ledger entry. */
+export async function addCustomerDebt(data: { customerId: number; amount: number; note?: string }) {
+  const amount = Number(data.amount) || 0
+  if (amount <= 0) throw new Error('أدخل مبلغ دين أكبر من صفر')
+
+  return db.transaction('rw', [db.customers, db.invoices], async () => {
+    const customer = await db.customers.get(data.customerId)
+    if (!customer) throw new Error('العميل غير موجود')
+    const note = data.note?.trim() || 'دين إضافي مسجل على الحساب'
+    await db.invoices.add({
+      customerId: data.customerId,
+      customerName: customer.name,
+      items: [{ productId: 0, name: note, qty: 1, price: amount, costPrice: 0 }],
+      subtotal: amount,
+      discountType: null,
+      discountValue: 0,
+      discountAmount: 0,
+      total: amount,
+      paidAmount: 0,
+      debtAmount: amount,
+      paymentType: 'debt',
+      note,
+      createdAt: new Date(),
+    })
+    await db.customers.update(data.customerId, { totalDebt: (customer.totalDebt || 0) + amount })
+  })
+}
+
+export async function getInitialDebt(customerId: number): Promise<number> {
+  const invoice = await db.invoices.where('customerId').equals(customerId)
+    .filter((item) => item.note === 'رصيد افتتاحي سابق').first()
+  return invoice?.debtAmount || 0
+}
+
+/** Update only the original opening balance without affecting later sales or payments. */
+export async function updateInitialDebt(customerId: number, amount: number) {
+  const nextAmount = Math.max(0, Number(amount) || 0)
+  return db.transaction('rw', [db.customers, db.invoices], async () => {
+    const customer = await db.customers.get(customerId)
+    if (!customer) throw new Error('العميل غير موجود')
+    const invoice = await db.invoices.where('customerId').equals(customerId)
+      .filter((item) => item.note === 'رصيد افتتاحي سابق').first()
+    const previousAmount = invoice?.debtAmount || 0
+    const difference = nextAmount - previousAmount
+
+    if (invoice?.id) {
+      await db.invoices.update(invoice.id, {
+        items: [{ productId: 0, name: 'رصيد دين افتتاحي سابـق', qty: 1, price: nextAmount, costPrice: 0 }],
+        subtotal: nextAmount, total: nextAmount, debtAmount: nextAmount,
+      })
+    } else if (nextAmount > 0) {
+      await db.invoices.add({
+        customerId,
+        customerName: customer.name,
+        items: [{ productId: 0, name: 'رصيد دين افتتاحي سابـق', qty: 1, price: nextAmount, costPrice: 0 }],
+        subtotal: nextAmount, discountType: null, discountValue: 0, discountAmount: 0,
+        total: nextAmount, paidAmount: 0, debtAmount: nextAmount, paymentType: 'debt',
+        note: 'رصيد افتتاحي سابق', createdAt: new Date(),
+      })
+    }
+    if (difference !== 0) {
+      await db.customers.update(customerId, { totalDebt: Math.max(0, (customer.totalDebt || 0) + difference) })
+    }
+  })
+}
+
 /**
  * Delete a customer.
  * - If `forceDelete` is false (default) and the customer has outstanding debt,

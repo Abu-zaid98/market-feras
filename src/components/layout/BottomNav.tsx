@@ -4,6 +4,7 @@ const NAV_ITEMS = [
   { path: '/', icon: '🛒', label: 'بيع', activeIcon: '🛒' },
   { path: '/products', icon: '📦', label: 'منتجات', activeIcon: '📦' },
   { path: '/customers', icon: '👥', label: 'عملاء', activeIcon: '👥' },
+  { path: '/invoices', icon: '🧾', label: 'فواتير', activeIcon: '🧾' },
   { path: '/reports', icon: '📊', label: 'تقارير', activeIcon: '📊' },
   { path: '/settings', icon: '⚙️', label: 'إعدادات', activeIcon: '⚙️' },
 ]

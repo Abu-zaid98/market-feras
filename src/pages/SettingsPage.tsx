@@ -7,7 +7,7 @@ import { db } from '../db/db'
 import { Modal } from '../components/ui/Modal'
 
 export function SettingsPage() {
-  const [storeName, setStoreName] = useState('مول بالطول')
+  const [storeName, setStoreName] = useState('POS System')
   const [ownerName, setOwnerName] = useState('')
   const [currency, setCurrency] = useState('₪')
   const [lowStockDefault, setLowStockDefault] = useState('5')
@@ -186,7 +186,7 @@ export function SettingsPage() {
         </div>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 900, marginBottom: 4, color: 'var(--color-text-primary)' }}>
-            {storeName || 'مول بالطول'}
+            {storeName || 'POS System'}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
             نظام نقطة البيع وإدارة الديون (POS & Debt PWA)

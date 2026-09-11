@@ -6,6 +6,9 @@ import {
   deleteCustomer,
   recordPayment,
   getCustomerLedger,
+  addCustomerDebt,
+  getInitialDebt,
+  updateInitialDebt,
   type CustomerLedgerItem,
 } from '../hooks/useCustomers'
 import { Modal } from '../components/ui/Modal'
@@ -23,6 +26,12 @@ export function CustomersPage() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [initialDebt, setInitialDebt] = useState('')
+
+  const [debtModalOpen, setDebtModalOpen] = useState(false)
+  const [debtCustomer, setDebtCustomer] = useState<Customer | null>(null)
+  const [newDebtAmount, setNewDebtAmount] = useState('')
+  const [newDebtNote, setNewDebtNote] = useState('')
+  const [isSavingDebt, setIsSavingDebt] = useState(false)
 
   // Payment modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
@@ -57,11 +66,11 @@ export function CustomersPage() {
     setCustomerModalOpen(true)
   }
 
-  const handleOpenEdit = (c: Customer) => {
+  const handleOpenEdit = async (c: Customer) => {
     setEditingCustomer(c)
     setName(c.name)
     setPhone(c.phone || '')
-    setInitialDebt('')
+    setInitialDebt(String(await getInitialDebt(c.id!)))
     setCustomerModalOpen(true)
   }
 
@@ -76,6 +85,7 @@ export function CustomersPage() {
         name: name.trim(),
         phone: phone.trim(),
       })
+      await updateInitialDebt(editingCustomer.id, parseFloat(initialDebt) || 0)
     } else {
       await addCustomer({
         name: name.trim(),
@@ -85,6 +95,25 @@ export function CustomersPage() {
     }
 
     setCustomerModalOpen(false)
+  }
+
+  const handleOpenAddDebt = (customer: Customer) => {
+    setDebtCustomer(customer)
+    setNewDebtAmount('')
+    setNewDebtNote('دين إضافي على الحساب')
+    setDebtModalOpen(true)
+  }
+
+  const handleSaveDebt = async () => {
+    if (!debtCustomer?.id) return
+    setIsSavingDebt(true)
+    try {
+      await addCustomerDebt({ customerId: debtCustomer.id, amount: parseFloat(newDebtAmount), note: newDebtNote })
+      setDebtModalOpen(false)
+      if (ledgerCustomer?.id === debtCustomer.id) await handleOpenLedger(debtCustomer)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'تعذر إضافة الدين')
+    } finally { setIsSavingDebt(false) }
   }
 
   const handleDelete = async (c: Customer, force = false) => {
@@ -468,6 +497,21 @@ export function CustomersPage() {
                   </button>
 
                   <button
+                    onClick={() => handleOpenAddDebt(c)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      background: 'rgba(239,68,68,0.1)',
+                      border: '1px solid rgba(239,68,68,0.25)',
+                      color: 'var(--color-danger-light)',
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-main)',
+                    }}
+                  >
+                    + إضافة دين
+                  </button>
+
+                  <button
                     onClick={() => handleOpenEdit(c)}
                     style={{
                       width: 36,
@@ -565,32 +609,24 @@ export function CustomersPage() {
             />
           </div>
 
-          {!editingCustomer && (
-            <div>
-              <label style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>
-                رصيد دين سابق (إن وجد):
-              </label>
-              <input
-                type="number"
-                min="0"
-                placeholder="0.00 ₪"
-                value={initialDebt}
-                onChange={(e) => setInitialDebt(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: 12,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: 14,
-                  outline: 'none',
-                  direction: 'ltr',
-                  textAlign: 'right',
-                }}
-              />
-            </div>
-          )}
+          <div>
+            <label style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 4 }}>
+              رصيد الدين الافتتاحي:
+            </label>
+            <input
+              type="number"
+              min="0"
+              placeholder="0.00 ₪"
+              value={initialDebt}
+              onChange={(e) => setInitialDebt(e.target.value)}
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.06)',
+                border: '1px solid var(--color-border)', color: 'var(--color-text-primary)', fontSize: 14,
+                outline: 'none', direction: 'ltr', textAlign: 'right',
+              }}
+            />
+            {editingCustomer && <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 5 }}>هذا يعدّل الدين الافتتاحي فقط؛ أضف الديون اللاحقة عبر زر «إضافة دين» ليظهر كل شيء في السجل.</p>}
+          </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
             <button
@@ -627,6 +663,32 @@ export function CustomersPage() {
             >
               {editingCustomer ? 'حفظ التعديلات' : 'إضافة العميل'}
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL: ADD A MANUAL DEBT ENTRY */}
+      <Modal
+        open={debtModalOpen}
+        onClose={() => setDebtModalOpen(false)}
+        title={debtCustomer ? `إضافة دين — ${debtCustomer.name}` : 'إضافة دين'}
+        type="box"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, padding: 12, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.7 }}>
+            سيُضاف المبلغ إلى دين العميل ويظهر كحركة مستقلة في كشف الحساب.
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 5, fontWeight: 700 }}>المبلغ *</label>
+            <input type="number" min="0.01" step="0.01" placeholder="0.00 ₪" value={newDebtAmount} onChange={(event) => setNewDebtAmount(event.target.value)} className="input" style={{ direction: 'ltr', textAlign: 'right' }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: 'var(--color-text-secondary)', display: 'block', marginBottom: 5 }}>سبب الدين / ملاحظة</label>
+            <input type="text" placeholder="مثال: بضاعة آجلة خارج الفاتورة" value={newDebtNote} onChange={(event) => setNewDebtNote(event.target.value)} className="input" />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDebtModalOpen(false)}>إلغاء</button>
+            <button type="button" className="btn btn-danger" style={{ flex: 1 }} disabled={isSavingDebt} onClick={handleSaveDebt}>{isSavingDebt ? 'جارٍ الحفظ...' : 'إضافة الدين'}</button>
           </div>
         </div>
       </Modal>

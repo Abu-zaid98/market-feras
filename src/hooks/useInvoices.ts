@@ -211,3 +211,79 @@ export async function deleteInvoice(invoiceId: number) {
     await db.invoices.delete(invoiceId)
   })
 }
+
+export interface UpdateInvoiceInput {
+  customerId: number | null
+  customerName?: string
+  paymentType: PaymentType
+  paymentMethod?: PaymentMethod
+  paidAmount: number
+  note: string
+}
+
+/**
+ * Updates the editable financial details of an invoice while keeping stock and
+ * customer balances consistent. Item editing is intentionally kept in the sale
+ * flow; it prevents accidental inventory changes from the invoice archive.
+ */
+export async function updateInvoiceDetails(invoiceId: number, data: UpdateInvoiceInput) {
+  return db.transaction('rw', [db.invoices, db.customers, db.payments], async () => {
+    const invoice = await db.invoices.get(invoiceId)
+    if (!invoice) throw new Error('الفاتورة غير موجودة')
+
+    const paidAmount = Math.min(invoice.total, Math.max(0, Number(data.paidAmount) || 0))
+    const debtAmount = Math.max(0, invoice.total - paidAmount)
+
+    if (debtAmount > 0 && !data.customerId) {
+      throw new Error('اختر العميل عند وجود مبلغ متبقٍ كدين')
+    }
+
+    // Remove the old debt from its customer, then add the new debt to its customer.
+    if (invoice.customerId && invoice.debtAmount > 0) {
+      const oldCustomer = await db.customers.get(invoice.customerId)
+      if (oldCustomer) {
+        await db.customers.update(invoice.customerId, {
+          totalDebt: Math.max(0, (oldCustomer.totalDebt || 0) - invoice.debtAmount),
+        })
+      }
+    }
+    if (data.customerId && debtAmount > 0) {
+      const newCustomer = await db.customers.get(data.customerId)
+      if (!newCustomer) throw new Error('العميل غير موجود')
+      await db.customers.update(data.customerId, {
+        totalDebt: (newCustomer.totalDebt || 0) + debtAmount,
+      })
+    }
+
+    // The payment that belongs to the original sale is replaced. Independent
+    // collection receipts remain untouched.
+    const linkedPayments = await db.payments.where('invoiceId').equals(invoiceId).toArray()
+    await Promise.all(linkedPayments
+      .filter((payment) => payment.note.includes(`فاتورة #${invoiceId}`) || payment.note.includes(`#${invoiceId}`))
+      .map((payment) => db.payments.delete(payment.id!)))
+
+    const method = data.paymentMethod || 'cash'
+    if (paidAmount > 0) {
+      await db.payments.add({
+        customerId: data.customerId || 0,
+        invoiceId,
+        amount: paidAmount,
+        method,
+        note: data.customerId
+          ? `دفعة عبر ${getPaymentMethodName(method)} لفاتورة #${invoiceId}`
+          : `بيع مباشر عبر ${getPaymentMethodName(method)} #${invoiceId}`,
+        createdAt: invoice.createdAt,
+      })
+    }
+
+    await db.invoices.update(invoiceId, {
+      customerId: data.customerId,
+      customerName: data.customerName || undefined,
+      paymentType: data.paymentType,
+      paymentMethod: method,
+      paidAmount,
+      debtAmount,
+      note: data.note.trim(),
+    })
+  })
+}

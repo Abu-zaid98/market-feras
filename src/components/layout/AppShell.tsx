@@ -4,6 +4,7 @@ import { BottomNav } from './BottomNav'
 import { Modal } from '../ui/Modal'
 import { getStoredTheme, toggleTheme, type Theme } from '../../utils/theme'
 import { useStoreName } from '../../hooks/useStoreName'
+import { CurrentDate } from './CurrentDate'
 
 // PAGE_TITLES is now built dynamically inside the component using the store name
 
@@ -19,6 +20,7 @@ export function AppShell({ onLogout }: AppShellProps) {
     '/': `${storeName} — بيع`,
     '/products': 'المنتجات',
     '/customers': 'العملاء',
+    '/invoices': 'سجل الفواتير',
     '/reports': 'التقارير',
     '/settings': 'الإعدادات',
   }
@@ -51,14 +53,20 @@ export function AppShell({ onLogout }: AppShellProps) {
           justifyContent: 'space-between',
           width: '100%',
         }}>
-          <h1 style={{
-            fontSize: 17,
-            fontWeight: 800,
-            color: 'var(--color-text-primary)',
-            letterSpacing: '-0.3px',
-          }}>
-            {title}
-          </h1>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: 'var(--color-text-primary)',
+              letterSpacing: '-0.3px',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {title}
+            </h1>
+            <CurrentDate />
+          </div>
 
           <div style={{
             display: 'flex',

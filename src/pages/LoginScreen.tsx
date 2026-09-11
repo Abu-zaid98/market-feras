@@ -37,7 +37,7 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
 
     // Play subtle haptic feedback on mobile if supported
     if (navigator.vibrate) {
-      try { navigator.vibrate(15) } catch {}
+      try { navigator.vibrate(15) } catch { }
     }
 
     if (next.length === 6) {
@@ -76,7 +76,7 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
         setError('رمز الدخول غير صحيح')
         setPasswordInput('')
         if (navigator.vibrate) {
-          try { navigator.vibrate([40, 60, 40]) } catch {}
+          try { navigator.vibrate([40, 60, 40]) } catch { }
         }
         setTimeout(() => setIsShaking(false), 500)
       }
@@ -226,8 +226,7 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
           🏪
         </div>
         <h1 style={{ fontSize: 24, fontWeight: 900, letterSpacing: '-0.5px', color: 'var(--color-text-primary)' }}>
-          مول بالطول
-        </h1>
+          POS Market        </h1>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
           أدخل رمز الدخول للمتابعة
         </p>
@@ -320,13 +319,13 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
                 background: isDel
                   ? 'rgba(239,68,68,0.1)'
                   : isClear
-                  ? 'var(--color-input-bg)'
-                  : 'var(--color-bg-card)',
+                    ? 'var(--color-input-bg)'
+                    : 'var(--color-bg-card)',
                 color: isDel
                   ? 'var(--color-danger-light)'
                   : isClear
-                  ? 'var(--color-text-muted)'
-                  : 'var(--color-text-primary)',
+                    ? 'var(--color-text-muted)'
+                    : 'var(--color-text-primary)',
                 fontSize: isSpecial ? 18 : 23,
                 fontWeight: 700,
                 cursor: 'pointer',

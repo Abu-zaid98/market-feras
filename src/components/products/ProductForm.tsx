@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { BarcodeScanner } from '../ui/BarcodeScanner'
+import { CustomSelect } from '../ui/CustomSelect'
 import { addProduct, updateProduct } from '../../hooks/useProducts'
 import { useCategories } from '../../hooks/useCategories'
 import type { Product } from '../../db/db'
@@ -51,7 +52,7 @@ export function ProductForm({ open, onClose, product, initialBarcode }: ProductF
     }
   }, [open, product, initialBarcode])
 
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }))
     setErrors((er) => ({ ...er, [key]: '' }))
   }
@@ -138,21 +139,12 @@ export function ProductForm({ open, onClose, product, initialBarcode }: ProductF
           />
 
           {/* Category */}
-          <div className="input-wrap">
-            <label className="input-label">التصنيف</label>
-            <select
-              className="input"
-              value={form.category}
-              onChange={set('category')}
-              style={{ cursor: 'pointer' }}
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.name} style={{ background: '#1a2035' }}>
-                  {c.icon} {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            label="التصنيف"
+            value={form.category}
+            onChange={(category) => setForm((current) => ({ ...current, category }))}
+            options={categories.map((category) => ({ value: category.name, label: `${category.icon} ${category.name}` }))}
+          />
 
           {/* Prices */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

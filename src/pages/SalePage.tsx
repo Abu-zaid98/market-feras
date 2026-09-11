@@ -7,6 +7,7 @@ import { useCart } from '../hooks/useCart'
 import { BarcodeScanner } from '../components/ui/BarcodeScanner'
 import { CategoryManagerModal } from '../components/products/CategoryManagerModal'
 import { Modal } from '../components/ui/Modal'
+import { CustomSelect } from '../components/ui/CustomSelect'
 import { formatCurrency } from '../utils/currency'
 import {
   type Invoice,
@@ -261,13 +262,14 @@ export function SalePage() {
     <div
       style={{
         padding: '12px 14px',
-        paddingBottom: cart.length > 0 ? 150 : 40,
+        paddingBottom: cart.length > 0 ? 'calc(var(--bottom-bar-total-height, 72px) + 150px)' : 'var(--page-bottom-padding, 110px)',
         maxWidth: 640,
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
         minHeight: '100%',
+        boxSizing: 'border-box',
       }}
     >
       {/* Toast scan message */}
@@ -740,7 +742,7 @@ export function SalePage() {
         <div
           style={{
             position: 'fixed',
-            bottom: 'var(--nav-height, 72px)',
+            bottom: 'var(--bottom-bar-total-height, 72px)',
             left: 0,
             right: 0,
             zIndex: 45,
@@ -1174,28 +1176,16 @@ export function SalePage() {
                 </button>
               </div>
 
-              <select
-                value={selectedCustomerId ?? ''}
-                onChange={(e) => setSelectedCustomerId(e.target.value ? Number(e.target.value) : null)}
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  borderRadius: 12,
-                  background: 'var(--color-bg-card)',
-                  border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  outline: 'none',
-                }}
-              >
-                <option value="">-- اختر العميل --</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} {c.totalDebt > 0 ? `(عليه دين: ${formatCurrency(c.totalDebt)})` : ''}
-                  </option>
-                ))}
-              </select>
+              <CustomSelect
+                value={selectedCustomerId}
+                placeholder="-- اختر العميل --"
+                onChange={setSelectedCustomerId}
+                options={customers.filter((customer) => customer.id !== undefined).map((customer) => ({
+                  value: customer.id!,
+                  label: customer.name,
+                  description: customer.totalDebt > 0 ? `رصيده الحالي: ${formatCurrency(customer.totalDebt)}` : 'لا يوجد دين حالي',
+                }))}
+              />
             </div>
           )}
 

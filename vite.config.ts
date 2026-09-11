@@ -11,9 +11,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
-        name: 'مول بالطول',
-        short_name: 'مول بالطول',
-        description: 'نظام نقطة البيع وإدارة الديون',
+        name: 'POS System',
+        short_name: 'POS System',
+        description: 'POS System',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',

@@ -11,6 +11,7 @@ import { ProductsPage } from './pages/ProductsPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { InvoicesPage } from './pages/InvoicesPage'
 
 function App() {
   const [authenticated, setAuthenticated] = useState(() => {
@@ -72,6 +73,7 @@ function App() {
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

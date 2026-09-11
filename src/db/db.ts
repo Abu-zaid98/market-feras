@@ -103,25 +103,25 @@ export class PosDatabase extends Dexie {
     super('MallBilToulPOS')
 
     this.version(1).stores({
-      products:  '++id, barcode, name, category',
+      products: '++id, barcode, name, category',
       customers: '++id, name, phone',
-      invoices:  '++id, customerId, createdAt, paymentType',
-      payments:  '++id, customerId, invoiceId, createdAt',
-      settings:  'key',
+      invoices: '++id, customerId, createdAt, paymentType',
+      payments: '++id, customerId, invoiceId, createdAt',
+      settings: 'key',
     })
 
     this.version(2).stores({
-      payments:  '++id, customerId, invoiceId, createdAt, method',
-      invoices:  '++id, customerId, createdAt, paymentType, paymentMethod',
+      payments: '++id, customerId, invoiceId, createdAt, method',
+      invoices: '++id, customerId, createdAt, paymentType, paymentMethod',
     })
 
     // Version 3: explicitly declare all stores together to avoid missing-table errors
     this.version(3).stores({
-      products:  '++id, barcode, name, category',
+      products: '++id, barcode, name, category',
       customers: '++id, name, phone',
-      invoices:  '++id, customerId, createdAt, paymentType, paymentMethod',
-      payments:  '++id, customerId, invoiceId, createdAt, method',
-      settings:  'key',
+      invoices: '++id, customerId, createdAt, paymentType, paymentMethod',
+      payments: '++id, customerId, invoiceId, createdAt, method',
+      settings: 'key',
     })
   }
 }
@@ -136,12 +136,12 @@ export async function initSettings() {
   const storeName = await db.settings.get('storeName')
   if (!storeName) {
     await db.settings.bulkPut([
-      { key: 'storeName', value: 'مول بالطول' },
+      { key: 'storeName', value: 'POS System' },
       { key: 'ownerName', value: '' },
       { key: 'currency', value: '₪' },
       { key: 'passwordHash', value: null },
       { key: 'lastBackupAt', value: null },
-      { key: 'categories', value: ['مشروبات', 'وجبات خفيفة', 'مواد تنظيف', 'ألبان وأجبان', 'خبز ومعجنات', 'أخرى'] },
+      { key: 'categories', value: ['مشروبات', 'حاجات أطفال', 'مواد تنظيف', 'ألبان وأجبان', 'خبز ومعجنات', 'أخرى'] },
       { key: 'lowStockDefault', value: 5 },
     ])
   }
@@ -151,7 +151,7 @@ export async function initSettings() {
   if (!catList) {
     const defaultCats = [
       { id: 'beverages', name: 'مشروبات', icon: '🥤' },
-      { id: 'snacks', name: 'وجبات خفيفة', icon: '🍿' },
+      { id: 'snacks', name: 'حاجات أطفال ', icon: '🍿' },
       { id: 'cleaning', name: 'مواد تنظيف', icon: '🧹' },
       { id: 'dairy', name: 'ألبان وأجبان', icon: '🧀' },
       { id: 'bakery', name: 'خبز ومعجنات', icon: '🍞' },
