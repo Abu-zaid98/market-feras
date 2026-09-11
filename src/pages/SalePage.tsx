@@ -248,7 +248,18 @@ export function SalePage() {
   }
 
   return (
-    <div style={{ padding: '12px 14px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div
+      style={{
+        padding: '12px 14px',
+        paddingBottom: cart.length > 0 ? 150 : 40,
+        maxWidth: 640,
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        minHeight: '100%',
+      }}
+    >
       {/* Toast scan message */}
       {scanMessage && (
         <div style={{
@@ -476,9 +487,6 @@ export function SalePage() {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))',
               gap: 10,
-              maxHeight: 'calc(100vh - 290px)',
-              overflowY: 'auto',
-              paddingBottom: 70,
             }}>
               {products.map((p) => {
                 const inCart = cart.find((item) => item.productId === p.id)
@@ -588,7 +596,7 @@ export function SalePage() {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
                 <span style={{ fontSize: 13, color: 'var(--color-text-muted)', fontWeight: 600 }}>
                   الأصناف المضافة ({cart.length}) — محفوظة دائماً ✓
@@ -714,87 +722,146 @@ export function SalePage() {
         </div>
       )}
 
-      {/* Floating Bottom Bar / Summary */}
+      {/* Docked Bottom Bar / Summary & Checkout (Always visible above BottomNav) */}
       {cart.length > 0 && (
-        <div style={{
-          background: 'var(--color-bg-card)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 16,
-          padding: '12px 16px',
-          boxShadow: 'var(--shadow-lg)',
-          marginTop: 'auto',
-        }}>
-          {/* Subtotal & Discount row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>المجموع الفرعي ({totalCartCount} قطعة):</span>
-            <span style={{ fontSize: 14, fontWeight: 700, direction: 'ltr' }}>{formatCurrency(subtotal)}</span>
-          </div>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'var(--nav-height, 72px)',
+            left: 0,
+            right: 0,
+            zIndex: 45,
+            background: 'rgba(17, 24, 39, 0.95)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            borderTop: '1.5px solid rgba(59, 130, 246, 0.35)',
+            boxShadow: '0 -8px 30px rgba(0,0,0,0.6)',
+            padding: '10px 16px',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 640,
+              margin: '0 auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+            }}
+          >
+            {/* Discount row (shown in Cart Tab) */}
+            {activeTab === 'cart' && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>
+                  المجموع الفرعي ({totalCartCount} قطعة):{' '}
+                  <strong style={{ color: 'var(--color-text-primary)' }}>{formatCurrency(subtotal)}</strong>
+                </span>
 
-          {/* Discount Trigger */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <button
-              onClick={() => setShowDiscountModal(true)}
-              style={{
-                background: discountValue > 0 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)',
-                border: discountValue > 0 ? '1px solid var(--color-warning)' : '1px solid var(--color-border)',
-                borderRadius: 8,
-                padding: '4px 10px',
-                fontSize: 12,
-                fontWeight: 700,
-                color: discountValue > 0 ? 'var(--color-warning-light)' : 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-main)',
-              }}
-            >
-              {discountValue > 0
-                ? `🏷️ خصم: ${discountValue}${discountType === 'percent' ? '%' : ' ₪'}`
-                : '+ إضافة خصم'}
-            </button>
-            {discountAmount > 0 && (
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-warning-light)', direction: 'ltr' }}>
-                -{formatCurrency(discountAmount)}
-              </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    onClick={() => setShowDiscountModal(true)}
+                    style={{
+                      background: discountValue > 0 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)',
+                      border: discountValue > 0 ? '1px solid var(--color-warning)' : '1px solid var(--color-border)',
+                      borderRadius: 6,
+                      padding: '2px 8px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: discountValue > 0 ? 'var(--color-warning-light)' : 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-main)',
+                    }}
+                  >
+                    {discountValue > 0 ? `🏷️ خصم: ${discountValue}${discountType === 'percent' ? '%' : ' ₪'}` : '+ إضافة خصم'}
+                  </button>
+                  {discountAmount > 0 && (
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-warning-light)', direction: 'ltr' }}>
+                      -{formatCurrency(discountAmount)}
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
-          </div>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: 8,
-            borderTop: '1px solid var(--color-border)',
-          }}>
-            <div>
-              <p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>المبلغ النهائي المطلوب</p>
-              <p style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-primary-light)', direction: 'ltr' }}>
-                {formatCurrency(finalTotal)}
-              </p>
-            </div>
-
-            <button
-              onClick={handleOpenCheckout}
+            {/* Main Action Row: Final Total & Complete Sale Button */}
+            <div
               style={{
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                border: 'none',
-                borderRadius: 12,
-                padding: '12px 24px',
-                color: 'white',
-                fontSize: 16,
-                fontWeight: 800,
-                cursor: 'pointer',
-                fontFamily: 'var(--font-main)',
-                boxShadow: '0 4px 16px rgba(16,185,129,0.3)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
+                justifyContent: 'space-between',
+                gap: 12,
               }}
             >
-              <span>إتمام البيع</span>
-              <span>⬅️</span>
-            </button>
+              <div>
+                <p style={{ fontSize: 11, color: 'var(--color-text-muted)', margin: 0 }}>
+                  {activeTab === 'catalog' ? `السلة (${totalCartCount} قطعة)` : 'المبلغ النهائي المطلوب'}
+                </p>
+                <p style={{ fontSize: 21, fontWeight: 900, color: '#34d399', direction: 'ltr', margin: 0, lineHeight: 1.2 }}>
+                  {formatCurrency(finalTotal)}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {activeTab === 'catalog' && (
+                  <button
+                    onClick={() => setActiveTab('cart')}
+                    style={{
+                      background: 'rgba(59,130,246,0.15)',
+                      border: '1.5px solid rgba(59,130,246,0.4)',
+                      borderRadius: 12,
+                      padding: '10px 14px',
+                      color: 'var(--color-primary-light)',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-main)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                    }}
+                  >
+                    <span>السلة</span>
+                    <span
+                      style={{
+                        background: 'var(--color-primary)',
+                        color: 'white',
+                        borderRadius: 50,
+                        padding: '1px 6px',
+                        fontSize: 11,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {totalCartCount}
+                    </span>
+                  </button>
+                )}
+
+                <button
+                  onClick={handleOpenCheckout}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    border: 'none',
+                    borderRadius: 12,
+                    padding: '12px 22px',
+                    color: 'white',
+                    fontSize: 15,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-main)',
+                    boxShadow: '0 4px 16px rgba(16,185,129,0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>إتمام البيع</span>
+                  <span>⬅️</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
 
       {/* MODAL: DISCOUNT */}
       <Modal
