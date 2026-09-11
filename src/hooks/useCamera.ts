@@ -1,80 +1,230 @@
 import { useRef, useState, useCallback } from 'react'
-import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser'
+import { BrowserMultiFormatReader } from '@zxing/browser'
+import { DecodeHintType, BarcodeFormat } from '@zxing/library'
+
+function playBeepSound() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext
+    if (AudioCtx) {
+      const ctx = new AudioCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
+      gain.gain.setValueAtTime(0.2, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.12)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.12)
+    }
+  } catch {}
+  if (navigator.vibrate) {
+    try {
+      navigator.vibrate(80)
+    } catch {}
+  }
+}
 
 export function useCamera() {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null)
-  const controlsRef = useRef<IScannerControls | null>(null)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasTorch, setHasTorch] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
+
   const streamRef = useRef<MediaStream | null>(null)
+  const animFrameRef = useRef<number | null>(null)
+  const zxingControlsRef = useRef<any>(null)
+  const isDetectedRef = useRef(false)
 
   const stopScanning = useCallback(() => {
-    controlsRef.current?.stop()
-    controlsRef.current = null
-    readerRef.current = null
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
+    isDetectedRef.current = true
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current)
+      animFrameRef.current = null
+    }
+
+    if (zxingControlsRef.current) {
+      try {
+        zxingControlsRef.current.stop()
+      } catch {}
+      zxingControlsRef.current = null
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+
+    setTorchOn(false)
+    setHasTorch(false)
     setScanning(false)
   }, [])
 
-  const startScanning = useCallback(async (onDetected: (barcode: string) => void) => {
-    setError(null)
-    setScanning(true)
-
+  const toggleTorch = useCallback(async () => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (!track) return
     try {
-      readerRef.current = new BrowserMultiFormatReader()
-
-      const devices = await BrowserMultiFormatReader.listVideoInputDevices()
-      if (!devices.length) {
-        setError('لا توجد كاميرا متاحة')
-        setScanning(false)
-        return
-      }
-
-      // Prefer back camera
-      const backCam = devices.find((d) =>
-        d.label.toLowerCase().includes('back') ||
-        d.label.toLowerCase().includes('rear') ||
-        d.label.toLowerCase().includes('environment')
-      )
-      const deviceId = backCam?.deviceId ?? devices[devices.length - 1].deviceId
-
-      // Get camera stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, facingMode: 'environment' },
+      const next = !torchOn
+      await track.applyConstraints({
+        advanced: [{ torch: next } as any],
       })
-      streamRef.current = stream
+      setTorchOn(next)
+    } catch (e) {
+      console.warn('Torch toggle error:', e)
+    }
+  }, [torchOn])
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.play()
+  const startScanning = useCallback(
+    async (onDetected: (barcode: string) => void) => {
+      setError(null)
+      setScanning(true)
+      isDetectedRef.current = false
 
-        controlsRef.current = await readerRef.current.decodeFromVideoElement(
-          videoRef.current,
-          (result, err) => {
-            if (result) {
-              const code = result.getText()
-              stopScanning()
-              onDetected(code)
+      try {
+        // 1. Get high resolution stream with rear camera
+        let stream: MediaStream
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1920, min: 1280 },
+              height: { ideal: 1080, min: 720 },
+            },
+            audio: false,
+          })
+        } catch {
+          // Fallback if 1080p is rejected by older hardware
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false,
+          })
+        }
+
+        streamRef.current = stream
+
+        // Check torch & continuous autofocus capability
+        const track = stream.getVideoTracks()[0]
+        if (track) {
+          const capabilities = (track.getCapabilities ? track.getCapabilities() : {}) as any
+          if ('torch' in capabilities) {
+            setHasTorch(true)
+          }
+          if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+            try {
+              await track.applyConstraints({
+                advanced: [{ focusMode: 'continuous' } as any],
+              })
+            } catch {}
+          }
+        }
+
+        const video = videoRef.current
+        if (!video) return
+
+        video.srcObject = stream
+        video.setAttribute('playsinline', 'true')
+        video.muted = true
+        await video.play()
+
+        // 2. Check for native BarcodeDetector API (Android Chrome & modern browsers)
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new (window as any).BarcodeDetector({
+              formats: [
+                'ean_13',
+                'ean_8',
+                'upc_a',
+                'upc_e',
+                'code_128',
+                'code_39',
+                'code_93',
+                'itf',
+                'qr_code',
+              ],
+            })
+
+            const scanLoop = async () => {
+              if (isDetectedRef.current || !streamRef.current) return
+
+              if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+                try {
+                  const barcodes = await detector.detect(video)
+                  if (barcodes && barcodes.length > 0) {
+                    const code = barcodes[0].rawValue?.trim()
+                    if (code && !isDetectedRef.current) {
+                      isDetectedRef.current = true
+                      playBeepSound()
+                      stopScanning()
+                      onDetected(code)
+                      return
+                    }
+                  }
+                } catch {
+                  // Ignore frame detection errors and continue
+                }
+              }
+              animFrameRef.current = requestAnimationFrame(scanLoop)
             }
-            // Ignore continuous decode errors
+
+            animFrameRef.current = requestAnimationFrame(scanLoop)
+            return
+          } catch (e) {
+            console.warn('Native BarcodeDetector initialization failed, falling back to ZXing:', e)
+          }
+        }
+
+        // 3. Fallback: ZXing with TRY_HARDER hints for 1D retail barcodes
+        const hints = new Map()
+        hints.set(DecodeHintType.TRY_HARDER, true)
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.CODE_39,
+          BarcodeFormat.ITF,
+          BarcodeFormat.QR_CODE,
+        ])
+
+        const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 100 })
+        zxingControlsRef.current = await reader.decodeFromVideoElement(
+          video,
+          (result, err) => {
+            if (result && !isDetectedRef.current) {
+              const code = result.getText()?.trim()
+              if (code) {
+                isDetectedRef.current = true
+                playBeepSound()
+                stopScanning()
+                onDetected(code)
+              }
+            }
             if (err && err.name !== 'NotFoundException') {
-              console.warn('Scan error:', err)
+              // ignore regular scan frame miss
             }
           }
         )
+      } catch (e) {
+        const msg = (e as Error).message || ''
+        if (msg.includes('Permission') || msg.includes('NotAllowed')) {
+          setError('يجب السماح للتطبيق باستخدام الكاميرا من إعدادات المتصفح')
+        } else {
+          setError('تعذّر تشغيل الكاميرا، يرجى التأكد من صلاحيات المتصفح')
+        }
+        setScanning(false)
       }
-    } catch (e) {
-      const msg = (e as Error).message
-      if (msg.includes('Permission') || msg.includes('NotAllowed')) {
-        setError('يجب السماح للتطبيق باستخدام الكاميرا')
-      } else {
-        setError('تعذّر فتح الكاميرا')
-      }
-      setScanning(false)
-    }
-  }, [stopScanning])
+    },
+    [stopScanning]
+  )
 
-  return { videoRef, scanning, error, startScanning, stopScanning }
+  return { videoRef, scanning, error, hasTorch, torchOn, toggleTorch, startScanning, stopScanning }
 }
+
