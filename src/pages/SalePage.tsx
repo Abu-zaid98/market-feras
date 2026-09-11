@@ -293,11 +293,11 @@ export function SalePage() {
           flex: 1,
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
+          gap: 6,
           background: 'rgba(255,255,255,0.05)',
           border: '1.5px solid var(--color-border)',
           borderRadius: 50,
-          padding: '8px 14px',
+          padding: '6px 12px',
         }}>
           <span style={{ fontSize: 16 }}>🔍</span>
           <input
@@ -328,16 +328,17 @@ export function SalePage() {
           onClick={() => setScannerOpen(true)}
           title="مسح باركود بالكاميرا"
           style={{
-            width: 44,
-            height: 44,
+            width: 38,
+            height: 38,
             background: 'rgba(59,130,246,0.15)',
             border: '1.5px solid rgba(59,130,246,0.35)',
-            borderRadius: 14,
+            borderRadius: 12,
             cursor: 'pointer',
-            fontSize: 20,
+            fontSize: 18,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
           }}
         >
           📷
@@ -354,16 +355,17 @@ export function SalePage() {
           <button
             onClick={() => setActiveTab('catalog')}
             style={{
-              padding: '8px 12px',
+              padding: '6px 10px',
               borderRadius: 9,
               border: 'none',
               cursor: 'pointer',
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: 12,
               fontFamily: 'var(--font-main)',
               background: activeTab === 'catalog' ? 'var(--color-primary)' : 'transparent',
               color: activeTab === 'catalog' ? 'white' : 'var(--color-text-muted)',
               transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
             }}
           >
             📦 الأصناف
@@ -371,19 +373,20 @@ export function SalePage() {
           <button
             onClick={() => setActiveTab('cart')}
             style={{
-              padding: '8px 12px',
+              padding: '6px 10px',
               borderRadius: 9,
               border: 'none',
               cursor: 'pointer',
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: 12,
               fontFamily: 'var(--font-main)',
               background: activeTab === 'cart' ? 'var(--color-primary)' : 'transparent',
               color: activeTab === 'cart' ? 'white' : 'var(--color-text-muted)',
               display: 'flex',
               alignItems: 'center',
-              gap: 5,
+              gap: 4,
               transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
             }}
           >
             🛒 السلة

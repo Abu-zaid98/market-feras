@@ -86,10 +86,10 @@ export function CategoryManagerModal({ open, onClose }: CategoryManagerModalProp
           background: 'rgba(255,255,255,0.04)',
           border: '1px solid var(--color-border)',
           borderRadius: 14,
-          padding: 12,
+          padding: '8px 10px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 10,
+          gap: 8,
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary-light)' }}>
             + إضافة قسم جديد

@@ -69,17 +69,51 @@ export async function updateCustomer(id: number, data: Partial<Customer>) {
   return db.customers.update(id, data)
 }
 
-export async function deleteCustomer(id: number) {
-  return db.transaction('rw', [db.customers, db.invoices, db.payments], async () => {
-    await db.customers.delete(id)
+/**
+ * Delete a customer.
+ * - If `forceDelete` is false (default) and the customer has outstanding debt,
+ *   the function returns { blocked: true } instead of deleting.
+ * - If `forceDelete` is true, deletes the customer along with all their invoices
+ *   (reverting stock for each one) and all their payment records.
+ */
+export async function deleteCustomer(
+  id: number,
+  forceDelete = false
+): Promise<{ blocked: true } | { blocked: false }> {
+  return db.transaction('rw', [db.customers, db.invoices, db.products, db.payments], async () => {
+    const customer = await db.customers.get(id)
+    if (!customer) return { blocked: false }
+
+    // Block deletion if the customer still has debt (unless force-deleting)
+    if (!forceDelete && (customer.totalDebt || 0) > 0) {
+      return { blocked: true }
+    }
+
+    // Delete all payments for this customer
     await db.payments.where('customerId').equals(id).delete()
-    // Keep invoices customerId set to null so invoices aren't deleted
+
+    // Delete all invoices for this customer, reverting stock for real products
     const invoices = await db.invoices.where('customerId').equals(id).toArray()
     for (const inv of invoices) {
-      if (inv.id) {
-        await db.invoices.update(inv.id, { customerId: null })
+      if (!inv.id) continue
+      // Revert stock only for actual products (productId > 0)
+      for (const item of inv.items) {
+        if (item.productId > 0) {
+          const product = await db.products.get(item.productId)
+          if (product) {
+            await db.products.update(item.productId, {
+              quantity: product.quantity + item.qty,
+              updatedAt: new Date(),
+            })
+          }
+        }
       }
+      await db.invoices.delete(inv.id)
     }
+
+    // Delete the customer record itself
+    await db.customers.delete(id)
+    return { blocked: false }
   })
 }
 

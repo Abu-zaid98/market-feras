@@ -4,7 +4,9 @@ import { useProducts } from '../hooks/useProducts'
 import { useCustomers } from '../hooks/useCustomers'
 import { formatCurrency } from '../utils/currency'
 import { Modal } from '../components/ui/Modal'
-import { type Invoice, getPaymentMethodName } from '../db/db'
+import { type Invoice, getPaymentMethodName, db } from '../db/db'
+import { useStoreName } from '../hooks/useStoreName'
+import { useLiveQuery } from 'dexie-react-hooks'
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'all'
 
@@ -16,6 +18,10 @@ export function ReportsPage() {
   const allProducts = useProducts()
   const allCustomers = useCustomers('', 'debt')
   const balances = useAccountBalances()
+  const storeName = useStoreName()
+
+  // All payments (for debt collection tracking)
+  const allPayments = useLiveQuery(() => db.payments.toArray(), []) ?? []
 
   // Overall Debt
   const totalOutstandingDebt = useMemo(() => {
@@ -29,14 +35,26 @@ export function ReportsPage() {
 
   const totalCost = useMemo(() => {
     return invoices.reduce((sum, inv) => {
-      const invCost = inv.items.reduce((iSum, item) => iSum + (item.costPrice || 0) * item.qty, 0)
+      // Skip opening-balance pseudo-invoices (productId === 0)
+      const invCost = inv.items.reduce((iSum, item) => {
+        if (item.productId === 0) return iSum
+        return iSum + (item.costPrice || 0) * item.qty
+      }, 0)
       return sum + invCost
     }, 0)
   }, [invoices])
 
   const netProfit = useMemo(() => {
-    return Math.max(0, totalSales - totalCost)
-  }, [totalSales, totalCost])
+    // Profit = (salePrice - costPrice) for real products only, from cash/partial invoices
+    return invoices.reduce((sum, inv) => {
+      const invProfit = inv.items.reduce((iSum, item) => {
+        if (item.productId === 0) return iSum // skip opening-debt entries
+        const profit = (item.price - (item.costPrice || 0)) * item.qty
+        return iSum + profit
+      }, 0)
+      return sum + Math.max(0, invProfit)
+    }, 0)
+  }, [invoices])
 
   // Period breakdown by payment method
   const periodCollections = useMemo(() => {
@@ -52,6 +70,24 @@ export function ReportsPage() {
     })
     return map
   }, [invoices])
+
+  // Collected debts in period (payments on debt invoices, filtered by date)
+  const collectedDebtInPeriod = useMemo(() => {
+    const now = new Date()
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+    const startOfWeek = startOfDay - 6 * 24 * 60 * 60 * 1000
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+
+    return allPayments.reduce((sum, p) => {
+      // Only count payments that reference a specific invoice (debt collections)
+      if (!p.invoiceId) return sum
+      const pDate = new Date(p.createdAt).getTime()
+      if (period === 'today' && pDate < startOfDay) return sum
+      if (period === 'week' && pDate < startOfWeek) return sum
+      if (period === 'month' && pDate < startOfMonth) return sum
+      return sum + (p.amount || 0)
+    }, 0)
+  }, [allPayments, period])
 
   // Top Selling Products
   const topProducts = useMemo(() => {
@@ -95,7 +131,7 @@ export function ReportsPage() {
       .map((i) => `• ${i.name} (${i.qty} × ${formatCurrency(i.price)}) = ${formatCurrency(i.qty * i.price)}`)
       .join('\n')
 
-    let msg = `🧾 *فاتورة مبيعات — مول بالطول*\n`
+    let msg = `🧾 *فاتورة مبيعات — ${storeName}*\n`
     msg += `رقم الفاتورة: #${inv.id}\n`
     msg += `التاريخ: ${dateStr}\n`
     if (inv.customerName) msg += `العميل: ${inv.customerName}\n`
@@ -118,12 +154,13 @@ export function ReportsPage() {
 
   return (
     <div style={{ padding: '16px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* WALLETS & ACCOUNTS BALANCES (رصيد كل طريقة دفع منفصل) */}
+      {/* WALLETS & ACCOUNTS BALANCES */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e2a42, #111827)',
+        background: 'var(--color-bg-card)',
         border: '1px solid var(--color-border)',
         borderRadius: 18,
         padding: 16,
+        boxShadow: 'var(--shadow-sm)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -143,10 +180,10 @@ export function ReportsPage() {
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {/* Cash */}
           <div style={{
-            background: 'rgba(255,255,255,0.03)',
+            background: 'var(--color-input-bg)',
             border: '1px solid var(--color-border)',
             borderRadius: 14,
             padding: 12,
@@ -322,6 +359,25 @@ export function ReportsPage() {
           </div>
           <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
             على {allCustomers.length} عميل
+          </div>
+        </div>
+
+        {/* Collected Debts in Period */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(30,41,59,0.5))',
+          border: '1px solid rgba(16,185,129,0.25)',
+          borderRadius: 16,
+          padding: 16,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ fontSize: 13, color: 'var(--color-text-muted)', fontWeight: 600 }}>ديون محصلة</span>
+            <span style={{ fontSize: 18 }}>✅</span>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-success-light)', direction: 'ltr', textAlign: 'right' }}>
+            {formatCurrency(collectedDebtInPeriod)}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>
+            تحصيل (ليست أرباح)
           </div>
         </div>
       </div>

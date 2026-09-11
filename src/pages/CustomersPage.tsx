@@ -11,6 +11,7 @@ import {
 import { Modal } from '../components/ui/Modal'
 import { formatCurrency } from '../utils/currency'
 import { type Customer, type PaymentMethod, getPaymentMethodName } from '../db/db'
+import { useStoreName } from '../hooks/useStoreName'
 
 export function CustomersPage() {
   const [search, setSearch] = useState('')
@@ -41,6 +42,7 @@ export function CustomersPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<Customer | null>(null)
 
   const customers = useCustomers(search, filter)
+  const storeName = useStoreName()
 
   // Aggregate stats
   const totalOutstandingDebt = customers.reduce((sum, c) => sum + (c.totalDebt || 0), 0)
@@ -85,9 +87,12 @@ export function CustomersPage() {
     setCustomerModalOpen(false)
   }
 
-  const handleDelete = async (c: Customer) => {
-    if (c.id) {
-      await deleteCustomer(c.id)
+  const handleDelete = async (c: Customer, force = false) => {
+    if (!c.id) return
+    const result = await deleteCustomer(c.id, force)
+    if ('blocked' in result && result.blocked) {
+      // Show the modal again — it already shows debt warning and force-delete button
+      return
     }
     setDeleteConfirm(null)
   }
@@ -151,7 +156,7 @@ export function CustomersPage() {
     const today = new Date().toLocaleDateString('ar-EG', { dateStyle: 'medium' })
 
     let msg = `📋 *كشف حساب — ${c.name}*\n`
-    msg += `المتجر: مول بالطول\n`
+    msg += `المتجر: ${storeName}\n`
     msg += `📅 التاريخ: ${today}\n`
     msg += `--------------------------------\n`
 
@@ -944,52 +949,106 @@ export function CustomersPage() {
           type="box"
         >
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ fontSize: 36 }}>⚠️</div>
+            <div style={{ fontSize: 36 }}>{(deleteConfirm.totalDebt || 0) > 0 ? '⚠️' : '🗑️'}</div>
             <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
               هل أنت متأكد من حذف العميل "<strong style={{ color: 'var(--color-text-primary)' }}>{deleteConfirm.name}</strong>"؟
-              {deleteConfirm.totalDebt > 0 && (
-                <span style={{ display: 'block', color: 'var(--color-danger-light)', fontWeight: 700, marginTop: 6 }}>
-                  تنبيه: العميل لديه رصيد دين مستحق بقيمة {formatCurrency(deleteConfirm.totalDebt)}!
-                </span>
-              )}
             </p>
 
-            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                style={{
-                  flex: 1,
-                  padding: '11px',
+            {(deleteConfirm.totalDebt || 0) > 0 ? (
+              // Customer has debt — show warning + two options
+              <>
+                <div style={{
+                  background: 'rgba(239,68,68,0.1)',
+                  border: '1px solid rgba(239,68,68,0.3)',
                   borderRadius: 12,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-text-secondary)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-main)',
-                }}
-              >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDelete(deleteConfirm)}
-                style={{
-                  flex: 1,
-                  padding: '11px',
-                  borderRadius: 12,
-                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                  border: 'none',
-                  color: 'white',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-main)',
-                }}
-              >
-                نعم، احذف
-              </button>
-            </div>
+                  padding: '12px 14px',
+                  textAlign: 'right',
+                }}>
+                  <p style={{ fontSize: 13, color: 'var(--color-danger-light)', fontWeight: 700, marginBottom: 4 }}>
+                    ⚠️ هذا العميل لديه ديون مستحقة!
+                  </p>
+                  <p style={{ fontSize: 13, color: 'var(--color-danger-light)', direction: 'ltr', fontWeight: 800 }}>
+                    {formatCurrency(deleteConfirm.totalDebt)}
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 6 }}>
+                    حذفه مع ديونه سيمسح جميع فواتيره وسنداته من السجلات نهائياً.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirm(null)}
+                    style={{
+                      padding: '11px',
+                      borderRadius: 12,
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text-secondary)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-main)',
+                    }}
+                  >
+                    إلغاء (يُنصح بتصفير الديون أولاً)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(deleteConfirm, true)}
+                    style={{
+                      padding: '11px',
+                      borderRadius: 12,
+                      background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                      border: 'none',
+                      color: 'white',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-main)',
+                    }}
+                  >
+                    🗑️ حذف مع جميع ديونه وفواتيره
+                  </button>
+                </div>
+              </>
+            ) : (
+              // No debt — simple confirm
+              <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(null)}
+                  style={{
+                    flex: 1,
+                    padding: '11px',
+                    borderRadius: 12,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text-secondary)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-main)',
+                  }}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(deleteConfirm, false)}
+                  style={{
+                    flex: 1,
+                    padding: '11px',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    border: 'none',
+                    color: 'white',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-main)',
+                  }}
+                >
+                  نعم، احذف
+                </button>
+              </div>
+            )}
           </div>
         </Modal>
       )}

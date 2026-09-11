@@ -3,14 +3,9 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { Modal } from '../ui/Modal'
 import { getStoredTheme, toggleTheme, type Theme } from '../../utils/theme'
+import { useStoreName } from '../../hooks/useStoreName'
 
-const PAGE_TITLES: Record<string, string> = {
-  '/': 'مول بالطول — بيع',
-  '/products': 'المنتجات',
-  '/customers': 'العملاء',
-  '/reports': 'التقارير',
-  '/settings': 'الإعدادات',
-}
+// PAGE_TITLES is now built dynamically inside the component using the store name
 
 interface AppShellProps {
   onLogout?: () => void
@@ -18,7 +13,17 @@ interface AppShellProps {
 
 export function AppShell({ onLogout }: AppShellProps) {
   const location = useLocation()
-  const title = PAGE_TITLES[location.pathname] ?? 'مول بالطول'
+  const storeName = useStoreName()
+
+  const pageTitles: Record<string, string> = {
+    '/': `${storeName} — بيع`,
+    '/products': 'المنتجات',
+    '/customers': 'العملاء',
+    '/reports': 'التقارير',
+    '/settings': 'الإعدادات',
+  }
+
+  const title = pageTitles[location.pathname] ?? storeName
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>(getStoredTheme)
 
@@ -70,7 +75,7 @@ export function AppShell({ onLogout }: AppShellProps) {
               color: 'white',
               letterSpacing: '-0.2px',
             }}>
-              🏪 مول بالطول
+              🏪 {storeName}
             </div>
 
             {/* Theme Toggle Button */}
