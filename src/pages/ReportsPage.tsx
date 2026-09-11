@@ -33,16 +33,6 @@ export function ReportsPage() {
     return invoices.reduce((sum, inv) => sum + inv.total, 0)
   }, [invoices])
 
-  const totalCost = useMemo(() => {
-    return invoices.reduce((sum, inv) => {
-      // Skip opening-balance pseudo-invoices (productId === 0)
-      const invCost = inv.items.reduce((iSum, item) => {
-        if (item.productId === 0) return iSum
-        return iSum + (item.costPrice || 0) * item.qty
-      }, 0)
-      return sum + invCost
-    }, 0)
-  }, [invoices])
 
   const netProfit = useMemo(() => {
     // Profit = (salePrice - costPrice) for real products only, from cash/partial invoices
@@ -180,7 +170,7 @@ export function ReportsPage() {
           </span>
         </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {/* Cash */}
           <div style={{
             background: 'var(--color-input-bg)',
