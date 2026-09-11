@@ -3,36 +3,58 @@ import { db } from '../db/db'
 
 const SALT_ROUNDS = 10
 export const DEFAULT_MASTER_PIN = '123456'
+const LOCAL_STORAGE_PIN_KEY = 'pos_pin_hash'
 
 /**
- * Hash a password and store it in settings
+ * Hash a password and store it in Dexie settings and browser localStorage
  */
 export async function setPassword(password: string): Promise<void> {
   const hash = await bcrypt.hash(password, SALT_ROUNDS)
+  try {
+    localStorage.setItem(LOCAL_STORAGE_PIN_KEY, hash)
+  } catch {}
   await db.settings.put({ key: 'passwordHash', value: hash })
 }
 
 /**
+ * Get the currently stored password hash from DB or localStorage
+ */
+async function getStoredHash(): Promise<string | null> {
+  try {
+    const setting = await db.settings.get('passwordHash')
+    if (setting?.value && typeof setting.value === 'string') {
+      return setting.value
+    }
+  } catch {}
+
+  try {
+    const localHash = localStorage.getItem(LOCAL_STORAGE_PIN_KEY)
+    if (localHash) {
+      return localHash
+    }
+  } catch {}
+
+  return null
+}
+
+/**
  * Verify a password against the stored hash.
- * Always allows the default master PIN (123456) so user is never locked out.
+ * If no custom password was ever set, default is 123456.
+ * Once changed, only the new password is accepted.
  */
 export async function verifyPassword(password: string): Promise<boolean> {
-  // Always accept default PIN 123456
-  if (password === DEFAULT_MASTER_PIN) {
-    return true
-  }
+  const storedHash = await getStoredHash()
 
-  const setting = await db.settings.get('passwordHash')
-  if (!setting || !setting.value) {
-    // No password set yet — first time setup, default PIN works
-    return true
+  // First-time use / default: if no password hash is stored yet, default is 123456
+  if (!storedHash) {
+    return password === DEFAULT_MASTER_PIN
   }
 
   try {
-    return await bcrypt.compare(password, setting.value as string)
+    return await bcrypt.compare(password, storedHash)
   } catch (err) {
     console.error('Password verify error:', err)
-    return password === DEFAULT_MASTER_PIN
+    return false
   }
 }
 
@@ -40,20 +62,22 @@ export async function verifyPassword(password: string): Promise<boolean> {
  * Reset password back to default 123456
  */
 export async function resetToDefaultPassword(): Promise<void> {
-  const hash = await bcrypt.hash(DEFAULT_MASTER_PIN, SALT_ROUNDS)
-  await db.settings.put({ key: 'passwordHash', value: hash })
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_PIN_KEY)
+  } catch {}
+  await db.settings.put({ key: 'passwordHash', value: null })
 }
 
 /**
  * Check if a custom password has been set
  */
 export async function hasPassword(): Promise<boolean> {
-  const setting = await db.settings.get('passwordHash')
-  return !!setting?.value
+  const storedHash = await getStoredHash()
+  return !!storedHash
 }
 
 /**
- * Change password: verify old one first
+ * Change password: verify old one first, then store new password in browser
  */
 export async function changePassword(
   oldPassword: string,
@@ -64,4 +88,3 @@ export async function changePassword(
   await setPassword(newPassword)
   return true
 }
-

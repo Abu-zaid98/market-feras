@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useProducts } from '../hooks/useProducts'
+import { useProducts, getProductByBarcode } from '../hooks/useProducts'
 import { useCustomers, addCustomer } from '../hooks/useCustomers'
 import { createSaleInvoice, type CreateSaleInput } from '../hooks/useInvoices'
 import { useCategories } from '../hooks/useCategories'
@@ -59,6 +59,7 @@ export function SalePage() {
   // Scanner & alerts
   const [scannerOpen, setScannerOpen] = useState(false)
   const [scanMessage, setScanMessage] = useState<string | null>(null)
+  const [scannerFeedback, setScannerFeedback] = useState<{ text: string; success: boolean } | null>(null)
 
   // Success Receipt modal
   const [completedInvoice, setCompletedInvoice] = useState<Invoice | null>(null)
@@ -76,17 +77,26 @@ export function SalePage() {
     setPaymentMethod('cash')
   }
 
-  // Scanner handling
-  const handleBarcodeScan = (barcode: string) => {
-    setScannerOpen(false)
-    const found = products.find((p) => p.barcode === barcode)
+  // Continuous Scanner handling (looks up product across entire DB)
+  const handleBarcodeScan = async (barcode: string) => {
+    const trimmed = barcode.trim()
+    if (!trimmed) return
+
+    let found = await getProductByBarcode(trimmed)
+    if (!found) {
+      found = products.find((p) => p.barcode === trimmed)
+    }
+
     if (found) {
       addToCart(found)
-      setScanMessage(`تمت إضافة: ${found.name}`)
+      const msg = `✅ تمت إضافة: ${found.name}`
+      setScanMessage(msg)
+      setScannerFeedback({ text: msg, success: true })
       setTimeout(() => setScanMessage(null), 2500)
     } else {
-      setSearch(barcode)
-      setScanMessage(`لم يتم العثور على منتج بالباركود: ${barcode}`)
+      const msg = `⚠️ غير مسجل: ${trimmed}`
+      setScanMessage(msg)
+      setScannerFeedback({ text: msg, success: false })
       setTimeout(() => setScanMessage(null), 3500)
     }
   }
@@ -731,11 +741,11 @@ export function SalePage() {
             left: 0,
             right: 0,
             zIndex: 45,
-            background: 'rgba(17, 24, 39, 0.95)',
+            background: 'var(--color-bg-elevated)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
-            borderTop: '1.5px solid rgba(59, 130, 246, 0.35)',
-            boxShadow: '0 -8px 30px rgba(0,0,0,0.6)',
+            borderTop: '1.5px solid var(--color-border-active)',
+            boxShadow: 'var(--shadow-lg)',
             padding: '10px 16px',
           }}
         >
@@ -1586,7 +1596,15 @@ export function SalePage() {
       <BarcodeScanner
         open={scannerOpen}
         onDetected={handleBarcodeScan}
-        onClose={() => setScannerOpen(false)}
+        onClose={() => {
+          setScannerOpen(false)
+          setScannerFeedback(null)
+        }}
+        continuous={true}
+        cartCount={totalCartCount}
+        cartTotal={finalTotal}
+        onFinishInvoice={handleOpenCheckout}
+        lastScannedMessage={scannerFeedback}
       />
 
       {/* Category Manager Modal */}

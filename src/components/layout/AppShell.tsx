@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { BottomNav } from './BottomNav'
 import { Modal } from '../ui/Modal'
+import { getStoredTheme, toggleTheme, type Theme } from '../../utils/theme'
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'مول بالطول — بيع',
@@ -19,6 +20,12 @@ export function AppShell({ onLogout }: AppShellProps) {
   const location = useLocation()
   const title = PAGE_TITLES[location.pathname] ?? 'مول بالطول'
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
+  const [theme, setTheme] = useState<Theme>(getStoredTheme)
+
+  const handleToggleTheme = () => {
+    const next = toggleTheme()
+    setTheme(next)
+  }
 
   const handleQuickLogout = () => {
     setLogoutModalOpen(true)
@@ -66,6 +73,29 @@ export function AppShell({ onLogout }: AppShellProps) {
               🏪 مول بالطول
             </div>
 
+            {/* Theme Toggle Button */}
+            <button
+              type="button"
+              onClick={handleToggleTheme}
+              title={theme === 'dark' ? 'التحويل إلى الثيم الفاتح' : 'التحويل إلى الثيم الداكن'}
+              style={{
+                background: 'var(--color-input-bg)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 8,
+                padding: '4px 8px',
+                color: 'var(--color-text-primary)',
+                fontSize: 14,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 34,
+                height: 30,
+              }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+
             {/* Quick Logout / Lock Button */}
             {onLogout && (
               <button
@@ -73,7 +103,7 @@ export function AppShell({ onLogout }: AppShellProps) {
                 onClick={handleQuickLogout}
                 title="تسجيل خروج وقفل التطبيق"
                 style={{
-                  background: 'rgba(239,68,68,0.15)',
+                  background: 'rgba(239,68,68,0.12)',
                   border: '1px solid rgba(239,68,68,0.3)',
                   borderRadius: 8,
                   padding: '4px 8px',
@@ -85,6 +115,7 @@ export function AppShell({ onLogout }: AppShellProps) {
                   alignItems: 'center',
                   gap: 4,
                   fontFamily: 'var(--font-main)',
+                  height: 30,
                 }}
               >
                 <span>🔒</span>

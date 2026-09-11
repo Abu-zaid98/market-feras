@@ -37,9 +37,13 @@ export function useCamera() {
   const animFrameRef = useRef<number | null>(null)
   const zxingControlsRef = useRef<any>(null)
   const isDetectedRef = useRef(false)
+  const lastScannedCodeRef = useRef<string>('')
+  const lastScannedTimeRef = useRef<number>(0)
 
   const stopScanning = useCallback(() => {
     isDetectedRef.current = true
+    lastScannedCodeRef.current = ''
+    lastScannedTimeRef.current = 0
 
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current)
@@ -82,10 +86,12 @@ export function useCamera() {
   }, [torchOn])
 
   const startScanning = useCallback(
-    async (onDetected: (barcode: string) => void) => {
+    async (onDetected: (barcode: string) => void, continuous = false) => {
       setError(null)
       setScanning(true)
       isDetectedRef.current = false
+      lastScannedCodeRef.current = ''
+      lastScannedTimeRef.current = 0
 
       try {
         // 1. Get high resolution stream with rear camera
@@ -133,6 +139,27 @@ export function useCamera() {
         video.muted = true
         await video.play()
 
+        const handleDetectedCode = (code: string) => {
+          const now = Date.now()
+          if (continuous) {
+            // Debounce the exact same barcode for 1200ms, immediately accept different barcodes
+            if (code === lastScannedCodeRef.current && now - lastScannedTimeRef.current < 1200) {
+              return
+            }
+            lastScannedCodeRef.current = code
+            lastScannedTimeRef.current = now
+            playBeepSound()
+            onDetected(code)
+          } else {
+            if (!isDetectedRef.current) {
+              isDetectedRef.current = true
+              playBeepSound()
+              stopScanning()
+              onDetected(code)
+            }
+          }
+        }
+
         // 2. Check for native BarcodeDetector API (Android Chrome & modern browsers)
         if ('BarcodeDetector' in window) {
           try {
@@ -151,19 +178,16 @@ export function useCamera() {
             })
 
             const scanLoop = async () => {
-              if (isDetectedRef.current || !streamRef.current) return
+              if ((!continuous && isDetectedRef.current) || !streamRef.current) return
 
               if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
                 try {
                   const barcodes = await detector.detect(video)
                   if (barcodes && barcodes.length > 0) {
                     const code = barcodes[0].rawValue?.trim()
-                    if (code && !isDetectedRef.current) {
-                      isDetectedRef.current = true
-                      playBeepSound()
-                      stopScanning()
-                      onDetected(code)
-                      return
+                    if (code) {
+                      handleDetectedCode(code)
+                      if (!continuous) return
                     }
                   }
                 } catch {
@@ -198,13 +222,10 @@ export function useCamera() {
         zxingControlsRef.current = await reader.decodeFromVideoElement(
           video,
           (result, err) => {
-            if (result && !isDetectedRef.current) {
+            if (result) {
               const code = result.getText()?.trim()
               if (code) {
-                isDetectedRef.current = true
-                playBeepSound()
-                stopScanning()
-                onDetected(code)
+                handleDetectedCode(code)
               }
             }
             if (err && err.name !== 'NotFoundException') {
@@ -227,4 +248,3 @@ export function useCamera() {
 
   return { videoRef, scanning, error, hasTorch, torchOn, toggleTorch, startScanning, stopScanning }
 }
-

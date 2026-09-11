@@ -530,8 +530,8 @@ export function ReportsPage() {
                       {inv.paymentType === 'cash'
                         ? getPaymentMethodName(inv.paymentMethod)
                         : inv.paymentType === 'debt'
-                        ? 'دين آجل 📝'
-                        : `جزئي (${getPaymentMethodName(inv.paymentMethod)})`}
+                          ? 'دين آجل 📝'
+                          : `جزئي (${getPaymentMethodName(inv.paymentMethod)})`}
                     </span>
                     {inv.customerName && (
                       <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
@@ -587,8 +587,8 @@ export function ReportsPage() {
                 {selectedInvoice.paymentType === 'debt'
                   ? 'دين كامل (آجل) 📝'
                   : selectedInvoice.paymentType === 'partial'
-                  ? `دفع جزئي (${getPaymentMethodName(selectedInvoice.paymentMethod)})`
-                  : getPaymentMethodName(selectedInvoice.paymentMethod)}
+                    ? `دفع جزئي (${getPaymentMethodName(selectedInvoice.paymentMethod)})`
+                    : getPaymentMethodName(selectedInvoice.paymentMethod)}
               </div>
               {selectedInvoice.note && <div><strong>ملاحظة:</strong> {selectedInvoice.note}</div>}
             </div>

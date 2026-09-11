@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { exportBackup, importBackup, daysSinceBackup } from '../utils/backup'
 import { changePassword, hasPassword, setPassword } from '../utils/auth'
+import { getStoredTheme, applyTheme, type Theme } from '../utils/theme'
 import { db } from '../db/db'
 import { Modal } from '../components/ui/Modal'
 
@@ -13,6 +14,12 @@ export function SettingsPage() {
   const [backupDays, setBackupDays] = useState<number | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [currentTheme, setCurrentTheme] = useState<Theme>(getStoredTheme)
+
+  const handleThemeChange = (t: Theme) => {
+    applyTheme(t)
+    setCurrentTheme(t)
+  }
 
   // Password modal
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
@@ -154,13 +161,14 @@ export function SettingsPage() {
     <div style={{ padding: '16px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Store Header Card */}
       <div style={{
-        background: 'linear-gradient(135deg, #1e2a42, #111827)',
+        background: 'var(--color-bg-card)',
         border: '1px solid var(--color-border)',
         borderRadius: 18,
         padding: 20,
         display: 'flex',
         alignItems: 'center',
         gap: 16,
+        boxShadow: 'var(--shadow-sm)',
       }}>
         <div style={{
           width: 60,
@@ -177,10 +185,83 @@ export function SettingsPage() {
           🏪
         </div>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 900, marginBottom: 4 }}>{storeName || 'مول بالطول'}</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 900, marginBottom: 4, color: 'var(--color-text-primary)' }}>
+            {storeName || 'مول بالطول'}
+          </h2>
           <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
             نظام نقطة البيع وإدارة الديون (POS & Debt PWA)
           </p>
+        </div>
+      </div>
+
+      {/* Appearance & Theme Card */}
+      <div style={{
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 16,
+        padding: 16,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: 'var(--shadow-sm)',
+      }}>
+        <div>
+          <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--color-text-primary)' }}>
+            🎨 مظهر التطبيق (الثيم)
+          </h3>
+          <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
+            التبديل بين الثيم الداكن والفاتح المريح للعين
+          </p>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          background: 'var(--color-input-bg)',
+          borderRadius: 12,
+          padding: 3,
+          border: '1px solid var(--color-border)',
+          gap: 4,
+        }}>
+          <button
+            type="button"
+            onClick={() => handleThemeChange('dark')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 9,
+              border: 'none',
+              background: currentTheme === 'dark' ? 'var(--color-primary)' : 'transparent',
+              color: currentTheme === 'dark' ? 'white' : 'var(--color-text-secondary)',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-main)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            🌙 داكن
+          </button>
+          <button
+            type="button"
+            onClick={() => handleThemeChange('light')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 9,
+              border: 'none',
+              background: currentTheme === 'light' ? 'var(--color-primary)' : 'transparent',
+              color: currentTheme === 'light' ? 'white' : 'var(--color-text-secondary)',
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-main)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            ☀️ فاتح
+          </button>
         </div>
       </div>
 
