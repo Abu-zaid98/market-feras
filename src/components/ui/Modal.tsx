@@ -29,10 +29,18 @@ export function Modal({ open, onClose, title, children, type = 'sheet', footer }
     <div
       className={`modal-backdrop ${type === 'box' ? 'center' : ''}`}
       onClick={handleBackdropClick}
+      style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))' }}
     >
       <div
         className={type === 'sheet' ? 'modal-sheet' : 'modal-box'}
-        style={footer ? { display: 'flex', flexDirection: 'column', maxHeight: '90dvh', overflow: 'hidden' } : undefined}
+        style={footer ? {
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '90dvh',
+          height: 'auto',
+          overflow: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+        } : undefined}
       >
         {type === 'sheet' && <div className="modal-drag-handle" style={{ flexShrink: 0 }} />}
 
@@ -70,21 +78,32 @@ export function Modal({ open, onClose, title, children, type = 'sheet', footer }
           <>
             <div style={{
               flex: 1,
+              minHeight: 0,
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
-              paddingBottom: 10,
+              overscrollBehavior: 'contain',
+              paddingBottom: 8,
               paddingRight: 2,
               paddingLeft: 2,
             }}>
               {children}
             </div>
             <div style={{
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 2,
               flexShrink: 0,
               paddingTop: 12,
+              paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
               borderTop: '1px solid var(--color-border)',
               background: 'var(--color-bg-elevated)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              boxShadow: '0 -8px 20px rgba(15, 23, 42, 0.08)',
             }}>
-              {footer}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', width: '100%' }}>
+                {footer}
+              </div>
             </div>
           </>
         ) : (

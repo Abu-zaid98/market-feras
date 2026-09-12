@@ -184,7 +184,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div style={{ padding: '16px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ padding: '16px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
       {/* Store Header Card */}
       <div style={{
         background: 'var(--color-bg-card)',
@@ -195,6 +195,7 @@ export function SettingsPage() {
         alignItems: 'center',
         gap: 16,
         boxShadow: 'var(--shadow-sm)',
+        flexWrap: 'wrap',
       }}>
         <div style={{
           width: 60,
@@ -230,6 +231,8 @@ export function SettingsPage() {
         justifyContent: 'space-between',
         alignItems: 'center',
         boxShadow: 'var(--shadow-sm)',
+        flexWrap: 'wrap',
+        gap: 10,
       }}>
         <div>
           <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--color-text-primary)' }}>

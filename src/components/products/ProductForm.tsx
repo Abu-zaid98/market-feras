@@ -119,23 +119,23 @@ export function ProductForm({
         title={product ? 'تعديل منتج' : 'إضافة منتج جديد'}
         type="sheet"
         footer={
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={onClose}
-              style={{ flex: 1 }}
-            >
-              إلغاء
-            </button>
+          <div style={{ display: 'flex', gap: 10, flexDirection: 'row-reverse', alignItems: 'center', width: '100%' }}>
             <Button
               variant="primary"
               loading={loading}
               onClick={handleSubmit}
-              style={{ flex: 2 }}
+              style={{ flex: 2, minHeight: 46, width: '100%' }}
             >
               {product ? 'حفظ التعديلات' : '✓ إضافة المنتج'}
             </Button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onClose}
+              style={{ flex: 1, minHeight: 46 }}
+            >
+              إلغاء
+            </button>
           </div>
         }
       >

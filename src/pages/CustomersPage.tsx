@@ -227,13 +227,14 @@ export function CustomersPage() {
   return (
     <div style={{ padding: '16px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Top Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
         <div style={{
           background: 'var(--color-bg-card)',
           border: '1px solid rgba(239,68,68,0.3)',
           borderRadius: 14,
           padding: '12px 10px',
           textAlign: 'center',
+          minHeight: 96,
         }}>
           <div style={{ fontSize: 20, marginBottom: 2 }}>💰</div>
           <div style={{ fontSize: 17, fontWeight: 900, color: 'var(--color-danger-light)', direction: 'ltr' }}>

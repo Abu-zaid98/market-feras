@@ -168,7 +168,7 @@ export function ReportsPage() {
   const renderPeriodSelector = () => (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr 1fr',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
       gap: 6,
       background: 'var(--kpi-period-bg)',
       padding: 4,
@@ -208,7 +208,7 @@ export function ReportsPage() {
       {/* TOP SEGMENTED REPORT TABS */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
         gap: 6,
         background: 'var(--color-bg-card)',
         padding: 5,

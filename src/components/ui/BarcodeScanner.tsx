@@ -319,6 +319,7 @@ export function BarcodeScanner({
             type="submit"
             disabled={!manualCode.trim()}
             style={{
+              minHeight: 46,
               padding: '0 16px',
               borderRadius: 12,
               background: manualCode.trim() ? 'var(--color-primary)' : 'var(--color-btn-ghost-bg)',

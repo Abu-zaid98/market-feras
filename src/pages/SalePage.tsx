@@ -294,13 +294,15 @@ export function SalePage() {
       <div style={{
         display: 'flex',
         gap: 6,
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        width: '100%',
       }}>
 
         {/* Search */}
         <div style={{
-          width: '40%',
-          flexShrink: 0,
+          flex: '1 1 180px',
+          minWidth: 0,
           display: 'flex',
           alignItems: 'center',
           gap: 6,
@@ -309,6 +311,7 @@ export function SalePage() {
           borderRadius: 50,
           padding: '6px 12px',
           boxSizing: 'border-box',
+          minHeight: 42,
         }}>
           <span style={{ fontSize: 16 }}>🔍</span>
 
@@ -351,8 +354,8 @@ export function SalePage() {
           onClick={() => setScannerOpen(true)}
           title="مسح باركود بالكاميرا"
           style={{
-            width: 42,
-            height: 38,
+            width: 44,
+            height: 42,
             background: 'rgba(59,130,246,0.15)',
             border: '1.5px solid rgba(59,130,246,0.35)',
             borderRadius: 12,
@@ -362,6 +365,7 @@ export function SalePage() {
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
+            minHeight: 42,
           }}
         >
           📷
@@ -375,6 +379,7 @@ export function SalePage() {
           padding: 3,
           border: '1px solid var(--color-border)',
           flexShrink: 0,
+          minHeight: 42,
         }}>
 
           {/* Catalog Tab */}
@@ -568,6 +573,7 @@ export function SalePage() {
                       position: 'relative',
                       userSelect: 'none',
                       transition: 'transform 0.1s ease, border-color 0.15s ease',
+                      minHeight: 160,
                     }}
                   >
                     {inCart && (
@@ -692,6 +698,7 @@ export function SalePage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 10,
+                      flexWrap: 'wrap',
                     }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -850,6 +857,7 @@ export function SalePage() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 12,
+                flexWrap: 'wrap',
               }}
             >
               <div>
@@ -861,7 +869,7 @@ export function SalePage() {
                 </p>
               </div>
 
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {activeTab === 'catalog' && (
                   <button
                     onClick={() => setActiveTab('cart')}

@@ -83,34 +83,14 @@ export function ConfirmModal({
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            style={{
-              flex: 1,
-              padding: '12px',
-              borderRadius: 12,
-              border: '1px solid var(--color-border)',
-              background: 'rgba(255,255,255,0.06)',
-              color: 'var(--color-text-secondary)',
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontFamily: 'var(--font-main)',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {cancelText}
-          </button>
-
+        <div style={{ display: 'flex', gap: 10, flexDirection: 'row-reverse', alignItems: 'center', width: '100%' }}>
           <button
             type="button"
             onClick={onConfirm}
             disabled={loading}
             style={{
               flex: 1,
+              minHeight: 46,
               padding: '12px',
               borderRadius: 12,
               border: 'none',
@@ -126,6 +106,28 @@ export function ConfirmModal({
             }}
           >
             {loading ? 'جارٍ الحذف...' : confirmText}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            style={{
+              flex: 1,
+              minHeight: 46,
+              padding: '12px',
+              borderRadius: 12,
+              border: '1px solid var(--color-border)',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--color-text-secondary)',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--font-main)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {cancelText}
           </button>
         </div>
       </div>
