@@ -7,13 +7,16 @@ import { BarcodeScanner } from '../ui/BarcodeScanner'
 import { CustomSelect } from '../ui/CustomSelect'
 import { addProduct, updateProduct } from '../../hooks/useProducts'
 import { useCategories } from '../../hooks/useCategories'
-import type { Product } from '../../db/db'
+import { db, type Product } from '../../db/db'
 
 interface ProductFormProps {
   open: boolean
   onClose: () => void
   product?: Product | null
   initialBarcode?: string
+  initialName?: string
+  defaultQuantity?: string
+  onSaved?: (product: Product) => void
 }
 
 const EMPTY = {
@@ -26,7 +29,15 @@ const EMPTY = {
   category: 'أخرى',
 }
 
-export function ProductForm({ open, onClose, product, initialBarcode }: ProductFormProps) {
+export function ProductForm({
+  open,
+  onClose,
+  product,
+  initialBarcode,
+  initialName,
+  defaultQuantity,
+  onSaved,
+}: ProductFormProps) {
   const categories = useCategories()
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -46,11 +57,16 @@ export function ProductForm({ open, onClose, product, initialBarcode }: ProductF
           category: product.category,
         })
       } else {
-        setForm({ ...EMPTY, barcode: initialBarcode ?? '' })
+        setForm({
+          ...EMPTY,
+          barcode: initialBarcode ?? '',
+          name: initialName ?? '',
+          quantity: defaultQuantity !== undefined ? defaultQuantity : '',
+        })
       }
       setErrors({})
     }
-  }, [open, product, initialBarcode])
+  }, [open, product, initialBarcode, initialName, defaultQuantity])
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -79,13 +95,20 @@ export function ProductForm({ open, onClose, product, initialBarcode }: ProductF
       lowStockAlert: parseInt(form.lowStockAlert) || 5,
       category: form.category,
     }
+    let savedProduct: Product | undefined
     if (product?.id) {
       await updateProduct(product.id, data)
+      savedProduct = { ...product, ...data, updatedAt: new Date() }
     } else {
-      await addProduct(data)
+      const newId = await addProduct(data)
+      const fetched = await db.products.get(Number(newId))
+      savedProduct = fetched
     }
     setLoading(false)
     onClose()
+    if (savedProduct && onSaved) {
+      onSaved(savedProduct)
+    }
   }
 
   return (
@@ -95,6 +118,26 @@ export function ProductForm({ open, onClose, product, initialBarcode }: ProductF
         onClose={onClose}
         title={product ? 'تعديل منتج' : 'إضافة منتج جديد'}
         type="sheet"
+        footer={
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onClose}
+              style={{ flex: 1 }}
+            >
+              إلغاء
+            </button>
+            <Button
+              variant="primary"
+              loading={loading}
+              onClick={handleSubmit}
+              style={{ flex: 2 }}
+            >
+              {product ? 'حفظ التعديلات' : '✓ إضافة المنتج'}
+            </Button>
+          </div>
+        }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Barcode */}
@@ -175,6 +218,7 @@ export function ProductForm({ open, onClose, product, initialBarcode }: ProductF
               onChange={set('quantity')}
               inputMode="numeric"
               error={errors.quantity}
+              hint={defaultQuantity === '0' ? 'اتركها 0 إذا كنت تقوم بتوريد الكمية الآن عبر الفاتورة' : undefined}
             />
             <Input
               label="تنبيه مخزون منخفض"
@@ -201,11 +245,6 @@ export function ProductForm({ open, onClose, product, initialBarcode }: ProductF
               </span>
             </div>
           )}
-
-          {/* Submit */}
-          <Button variant="primary" full loading={loading} onClick={handleSubmit}>
-            {product ? 'حفظ التعديلات' : '✓ إضافة المنتج'}
-          </Button>
         </div>
       </Modal>
 

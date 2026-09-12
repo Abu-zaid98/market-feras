@@ -17,12 +17,13 @@ export function AppShell({ onLogout }: AppShellProps) {
   const storeName = useStoreName()
 
   const pageTitles: Record<string, string> = {
-    '/': `${storeName} — بيع`,
-    '/products': 'المنتجات',
-    '/customers': 'العملاء',
-    '/invoices': 'سجل الفواتير',
-    '/reports': 'التقارير',
-    '/settings': 'الإعدادات',
+    '/': `${storeName} كاشير `,
+    '/products': 'المخزون والتوريد',
+    '/purchases': 'فواتير وسجل التوريد',
+    '/customers': 'العملاء والديون',
+    '/invoices': 'سجل فواتير البيع',
+    '/reports': 'التقارير والإحصائيات',
+    '/settings': 'الإعدادات العامة',
   }
 
   const title = pageTitles[location.pathname] ?? storeName
@@ -85,6 +86,8 @@ export function AppShell({ onLogout }: AppShellProps) {
             }}>
               🏪 {storeName}
             </div>
+
+
 
             {/* Theme Toggle Button */}
             <button

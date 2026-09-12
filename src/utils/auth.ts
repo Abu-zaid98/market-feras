@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs'
 import { db } from '../db/db'
 
 const SALT_ROUNDS = 10
-export const DEFAULT_MASTER_PIN = '123456'
 const LOCAL_STORAGE_PIN_KEY = 'pos_pin_hash'
 
 /**
@@ -39,15 +38,13 @@ async function getStoredHash(): Promise<string | null> {
 
 /**
  * Verify a password against the stored hash.
- * If no custom password was ever set, default is 123456.
- * Once changed, only the new password is accepted.
+ * If no password was ever set, returns false (triggers first-time setup).
  */
 export async function verifyPassword(password: string): Promise<boolean> {
   const storedHash = await getStoredHash()
 
-  // First-time use / default: if no password hash is stored yet, default is 123456
   if (!storedHash) {
-    return password === DEFAULT_MASTER_PIN
+    return false
   }
 
   try {
@@ -59,7 +56,7 @@ export async function verifyPassword(password: string): Promise<boolean> {
 }
 
 /**
- * Reset password back to default 123456
+ * Reset password (clears stored hash so system requires first-time setup)
  */
 export async function resetToDefaultPassword(): Promise<void> {
   try {

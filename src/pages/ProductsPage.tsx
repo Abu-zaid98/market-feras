@@ -3,15 +3,20 @@ import { useProducts, deleteProduct } from '../hooks/useProducts'
 import { useCategories } from '../hooks/useCategories'
 import { ProductForm } from '../components/products/ProductForm'
 import { CategoryManagerModal } from '../components/products/CategoryManagerModal'
+import { QuickRestockModal } from '../components/products/QuickRestockModal'
+import { PurchasesPage } from './PurchasesPage'
 import { BarcodeScanner } from '../components/ui/BarcodeScanner'
 import { Badge } from '../components/ui/Badge'
 import type { Product } from '../db/db'
 
 export function ProductsPage() {
+  const [mainTab, setMainTab] = useState<'inventory' | 'purchases'>('inventory')
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editProduct, setEditProduct] = useState<Product | null>(null)
+  const [restockProduct, setRestockProduct] = useState<Product | null>(null)
+  const [restockModalOpen, setRestockModalOpen] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [scannedBarcode, setScannedBarcode] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<Product | null>(null)
@@ -56,245 +61,418 @@ export function ProductsPage() {
 
   return (
     <div style={{ padding: '16px' }}>
-      {/* Stats bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
-        {[
-          { label: 'إجمالي المنتجات', value: products.length, icon: '📦', color: '#3b82f6' },
-          { label: 'مخزون منخفض', value: lowStockCount, icon: '⚠️', color: '#f59e0b' },
-          { label: 'قيمة المخزون', value: `${totalValue.toFixed(0)} ₪`, icon: '💰', color: '#10b981', small: true },
-        ].map((s) => (
-          <div key={s.label} style={{
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 12,
-            padding: '12px 10px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 20, marginBottom: 4 }}>{s.icon}</div>
-            <div style={{ fontSize: s.small ? 13 : 18, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2, lineHeight: 1.3 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Search + Scan bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          background: 'rgba(255,255,255,0.05)',
-          border: '1.5px solid var(--color-border)',
-          borderRadius: 50,
-          padding: '10px 16px',
-        }}>
-          <span style={{ fontSize: 16 }}>🔍</span>
-          <input
-            style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              color: 'var(--color-text-primary)', fontFamily: 'var(--font-main)', fontSize: 14,
-            }}
-            placeholder="ابحث بالاسم أو الباركود..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button onClick={() => { setSearch(''); setScannedBarcode('') }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 18 }}>
-              ✕
-            </button>
-          )}
-        </div>
+      {/* Top Segmented Hub Switcher */}
+      <div style={{
+        display: 'flex',
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 14,
+        padding: 4,
+        marginBottom: 16,
+        gap: 6,
+      }}>
         <button
-          onClick={() => setScannerOpen(true)}
+          type="button"
+          onClick={() => setMainTab('inventory')}
           style={{
-            width: 48, height: 48,
-            background: 'rgba(59,130,246,0.15)',
-            border: '1.5px solid rgba(59,130,246,0.35)',
-            borderRadius: 14, cursor: 'pointer', fontSize: 22,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >📷</button>
-        <button
-          onClick={() => { setEditProduct(null); setScannedBarcode(''); setFormOpen(true) }}
-          style={{
-            width: 48, height: 48,
-            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-            border: 'none', borderRadius: 14, cursor: 'pointer', fontSize: 22,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 16px rgba(59,130,246,0.35)',
-          }}
-        >+</button>
-      </div>
-
-      {/* Category filter */}
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 14, alignItems: 'center' }}>
-        <button
-          onClick={() => setActiveCategory('')}
-          style={{
-            flexShrink: 0,
-            padding: '7px 14px',
-            borderRadius: 50,
-            border: activeCategory === '' ? '1.5px solid rgba(59,130,246,0.6)' : '1.5px solid var(--color-border)',
-            background: activeCategory === '' ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
-            color: activeCategory === '' ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            flex: 1,
+            padding: '10px 14px',
+            borderRadius: 10,
+            border: 'none',
+            background: mainTab === 'inventory' ? 'var(--color-primary)' : 'transparent',
+            color: mainTab === 'inventory' ? '#fff' : 'var(--color-text-secondary)',
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: 'pointer',
             fontFamily: 'var(--font-main)',
-            display: 'flex', alignItems: 'center', gap: 5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
           }}
         >
-          <span>🏷️</span>
-          <span>الكل</span>
+          <span>📦</span>
+          <span>الأصناف والمخزون</span>
         </button>
 
-        {categoriesList.map((cat) => {
-          const isActive = activeCategory === cat.name
-          return (
+        <button
+          type="button"
+          onClick={() => setMainTab('purchases')}
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            borderRadius: 10,
+            border: 'none',
+            background: mainTab === 'purchases' ? 'var(--color-primary)' : 'transparent',
+            color: mainTab === 'purchases' ? '#fff' : 'var(--color-text-secondary)',
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: 'pointer',
+            fontFamily: 'var(--font-main)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span>📥</span>
+          <span>فواتير وسجل التوريد</span>
+        </button>
+      </div>
+
+      {mainTab === 'purchases' ? (
+        <PurchasesPage />
+      ) : (
+        <>
+          {/* Stats bar */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+            {[
+              { label: 'إجمالي المنتجات', value: products.length, icon: '📦', color: '#3b82f6' },
+              { label: 'مخزون منخفض', value: lowStockCount, icon: '⚠️', color: '#f59e0b' },
+              { label: 'قيمة المخزون', value: `${totalValue.toFixed(0)} ₪`, icon: '💰', color: '#10b981', small: true },
+            ].map((s) => (
+              <div key={s.label} style={{
+                background: 'var(--color-bg-card)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 12,
+                padding: '10px 8px',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 18, marginBottom: 2 }}>{s.icon}</div>
+                <div style={{ fontSize: s.small ? 13 : 16, fontWeight: 800, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 2, lineHeight: 1.2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Full-width Search bar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'var(--color-bg-card)',
+            border: '1.5px solid var(--color-border)',
+            borderRadius: 14,
+            padding: '10px 16px',
+            marginBottom: 10,
+          }}>
+            <span style={{ fontSize: 16 }}>🔍</span>
+            <input
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: 'var(--color-text-primary)',
+                fontFamily: 'var(--font-main)',
+                fontSize: 14,
+              }}
+              placeholder="ابحث باسم المنتج أو الباركود..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setScannedBarcode('') }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 18 }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Action Row */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.name)}
+              type="button"
+              onClick={() => { setEditProduct(null); setScannedBarcode(''); setFormOpen(true) }}
+              style={{
+                flex: 2,
+                height: 44,
+                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                border: 'none',
+                borderRadius: 12,
+                cursor: 'pointer',
+                color: 'white',
+                fontSize: 13,
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
+                fontFamily: 'var(--font-main)',
+              }}
+            >
+              <span>+</span>
+              <span>إضافة منتج جديد</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setScannerOpen(true)}
+              style={{
+                flex: 1,
+                height: 44,
+                background: 'rgba(59,130,246,0.12)',
+                border: '1px solid rgba(59,130,246,0.3)',
+                borderRadius: 12,
+                cursor: 'pointer',
+                color: 'var(--color-primary-light)',
+                fontSize: 12,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                fontFamily: 'var(--font-main)',
+              }}
+            >
+              <span>📷</span>
+              <span>باركود</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCategoryModalOpen(true)}
+              style={{
+                flex: 1,
+                height: 44,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 12,
+                cursor: 'pointer',
+                color: 'var(--color-text-secondary)',
+                fontSize: 12,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                fontFamily: 'var(--font-main)',
+              }}
+            >
+              <span>⚙️</span>
+              <span>الأقسام</span>
+            </button>
+          </div>
+
+          {/* Category filter */}
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 14, alignItems: 'center' }}>
+            <button
+              onClick={() => setActiveCategory('')}
               style={{
                 flexShrink: 0,
-                padding: '7px 14px',
+                padding: '6px 14px',
                 borderRadius: 50,
-                border: isActive ? '1.5px solid rgba(59,130,246,0.6)' : '1.5px solid var(--color-border)',
-                background: isActive ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
-                color: isActive ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
-                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                border: activeCategory === '' ? '1.5px solid rgba(59,130,246,0.6)' : '1px solid var(--color-border)',
+                background: activeCategory === '' ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
+                color: activeCategory === '' ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 fontFamily: 'var(--font-main)',
                 display: 'flex', alignItems: 'center', gap: 5,
               }}
             >
-              <span>{cat.icon}</span>
-              <span>{cat.name}</span>
+              <span>🏷️</span>
+              <span>الكل</span>
             </button>
-          )
-        })}
 
-        <button
-          type="button"
-          onClick={() => setCategoryModalOpen(true)}
-          title="إدارة وتعديل وترتيب الأقسام"
-          style={{
-            flexShrink: 0,
-            padding: '7px 14px',
-            borderRadius: 50,
-            border: '1px dashed rgba(255,255,255,0.25)',
-            background: 'rgba(255,255,255,0.03)',
-            color: 'var(--color-text-secondary)',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            fontFamily: 'var(--font-main)',
-            display: 'flex', alignItems: 'center', gap: 5,
-          }}
-        >
-          <span>⚙️</span>
-          <span>إدارة الأقسام</span>
-        </button>
-      </div>
+            {categoriesList.map((cat) => {
+              const isActive = activeCategory === cat.name
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.name)}
+                  style={{
+                    flexShrink: 0,
+                    padding: '6px 14px',
+                    borderRadius: 50,
+                    border: isActive ? '1.5px solid rgba(59,130,246,0.6)' : '1px solid var(--color-border)',
+                    background: isActive ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)',
+                    color: isActive ? 'var(--color-primary-light)' : 'var(--color-text-muted)',
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    fontFamily: 'var(--font-main)',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.name}</span>
+                </button>
+              )
+            })}
+          </div>
 
-      {/* Product list */}
-      {products.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">🏷️</div>
-          <p style={{ fontSize: 16, fontWeight: 700 }}>
-            {search ? 'لا توجد نتائج' : 'لا توجد منتجات بعد'}
-          </p>
-          <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-            {search ? 'جرّب كلمة بحث مختلفة' : 'اضغط + لإضافة منتج جديد'}
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {products.map((p) => {
-            const isLow = p.quantity <= p.lowStockAlert
-            const isOut = p.quantity === 0
-            const profit = p.salePrice - p.costPrice
+          {/* Product list */}
+          {products.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🏷️</div>
+              <p style={{ fontSize: 16, fontWeight: 700 }}>
+                {search ? 'لا توجد نتائج' : 'لا توجد منتجات بعد'}
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+                {search ? 'جرّب كلمة بحث مختلفة' : 'اضغط على "+ إضافة منتج جديد" لإضافة أول صنف'}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {products.map((p) => {
+                const isLow = p.quantity <= p.lowStockAlert
+                const isOut = p.quantity === 0
+                const profit = p.salePrice - p.costPrice
 
-            return (
-              <div
-                key={p.id}
-                style={{
-                  background: 'var(--color-bg-card)',
-                  border: `1px solid ${isOut ? 'rgba(239,68,68,0.3)' : isLow ? 'rgba(245,158,11,0.3)' : 'var(--color-border)'}`,
-                  borderRadius: 14,
-                  padding: '14px',
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'center',
-                }}
-              >
-                {/* Category icon */}
-                <div style={{
-                  width: 46, height: 46,
-                  background: 'rgba(255,255,255,0.06)',
-                  borderRadius: 12,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 22, flexShrink: 0,
-                }}>
-                  {catIconMap[p.category] ?? '📦'}
-                </div>
+                return (
+                  <div
+                    key={p.id}
+                    style={{
+                      background: 'var(--color-bg-card)',
+                      border: `1px solid ${isOut ? 'rgba(239,68,68,0.35)' : isLow ? 'rgba(245,158,11,0.35)' : 'var(--color-border)'}`,
+                      borderRadius: 16,
+                      padding: '14px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                      boxShadow: 'var(--shadow-sm)',
+                    }}
+                  >
+                    {/* Top Row: Category Icon, Name, Pricing, Badges */}
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <div style={{
+                        width: 46, height: 46,
+                        background: 'rgba(255,255,255,0.06)',
+                        borderRadius: 12,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 24, flexShrink: 0,
+                      }}>
+                        {catIconMap[p.category] ?? '📦'}
+                      </div>
 
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                    <p style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {p.name}
-                    </p>
-                    {isOut && <Badge variant="danger">نفد</Badge>}
-                    {!isOut && isLow && <Badge variant="warning">منخفض</Badge>}
-                  </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <p style={{ fontSize: 15, fontWeight: 800, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.name}
+                          </p>
+                          {isOut && <Badge variant="danger">نفد</Badge>}
+                          {!isOut && isLow && <Badge variant="warning">منخفض</Badge>}
+                        </div>
 
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-text-primary)', direction: 'ltr' }}>
-                      {p.salePrice.toFixed(2)} ₪
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--color-success-light)' }}>
-                      ربح: {profit.toFixed(2)} ₪
-                    </span>
-                    <span style={{
-                      fontSize: 12,
-                      color: isOut ? 'var(--color-danger-light)' : isLow ? 'var(--color-warning-light)' : 'var(--color-text-muted)',
-                      fontWeight: 600,
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--color-text-primary)', direction: 'ltr' }}>
+                            {p.salePrice.toFixed(2)} ₪
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--color-success-light)', fontWeight: 600 }}>
+                            ربح: {profit.toFixed(2)} ₪
+                          </span>
+                          <span style={{
+                            fontSize: 11,
+                            padding: '2px 8px',
+                            borderRadius: 20,
+                            background: isOut ? 'rgba(239,68,68,0.12)' : isLow ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)',
+                            color: isOut ? 'var(--color-danger-light)' : isLow ? 'var(--color-warning-light)' : 'var(--color-success-light)',
+                            fontWeight: 700,
+                          }}>
+                            المخزون: {p.quantity}
+                          </span>
+                        </div>
+
+                        {p.barcode && (
+                          <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4, direction: 'ltr', textAlign: 'right' }}>
+                            🔖 {p.barcode}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Action Bar: Horizontal, wide, and comfortable */}
+                    <div style={{
+                      display: 'flex',
+                      gap: 8,
+                      paddingTop: 10,
+                      borderTop: '1px solid var(--color-border)',
+                      alignItems: 'center',
                     }}>
-                      متبقي: {p.quantity}
-                    </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRestockProduct(p)
+                          setRestockModalOpen(true)
+                        }}
+                        title="توريد بضاعة وزيادة المخزون"
+                        style={{
+                          flex: 2,
+                          height: 38,
+                          borderRadius: 10,
+                          background: 'rgba(16,185,129,0.15)',
+                          border: '1.5px solid rgba(16,185,129,0.4)',
+                          color: 'var(--color-success-light)',
+                          fontWeight: 800,
+                          fontSize: 8,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          fontFamily: 'var(--font-main)',
+                        }}
+                      >
+                        <span>📥</span>
+                        <span>توريد كمية</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(p)}
+                        title="تعديل بيانات المنتج"
+                        style={{
+                          flex: 1,
+                          height: 38,
+                          borderRadius: 10,
+                          background: 'rgba(59,130,246,0.12)',
+                          border: '1px solid rgba(59,130,246,0.3)',
+                          color: 'var(--color-primary-light)',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 4,
+                          fontFamily: 'var(--font-main)',
+                        }}
+                      >
+                        <span>✏️</span>
+                        <span>تعديل</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeleteConfirm(p)}
+                        title="حذف المنتج"
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          background: 'rgba(239,68,68,0.1)',
+                          border: '1px solid rgba(239,68,68,0.25)',
+                          color: 'var(--color-danger-light)',
+                          cursor: 'pointer',
+                          fontSize: 16,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
-
-                  {p.barcode && (
-                    <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2, direction: 'ltr', textAlign: 'right' }}>
-                      {p.barcode}
-                    </p>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-                  <button
-                    onClick={() => handleEdit(p)}
-                    style={{
-                      width: 36, height: 36, borderRadius: 9,
-                      background: 'rgba(59,130,246,0.15)',
-                      border: '1px solid rgba(59,130,246,0.25)',
-                      cursor: 'pointer', fontSize: 16,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >✏️</button>
-                  <button
-                    onClick={() => setDeleteConfirm(p)}
-                    style={{
-                      width: 36, height: 36, borderRadius: 9,
-                      background: 'rgba(239,68,68,0.1)',
-                      border: '1px solid rgba(239,68,68,0.2)',
-                      cursor: 'pointer', fontSize: 16,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >🗑️</button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* Delete confirm */}
@@ -346,6 +524,13 @@ export function ProductsPage() {
         onClose={() => { setFormOpen(false); setEditProduct(null); setScannedBarcode('') }}
         product={editProduct}
         initialBarcode={scannedBarcode}
+      />
+
+      {/* Quick Restock Modal */}
+      <QuickRestockModal
+        open={restockModalOpen}
+        onClose={() => { setRestockModalOpen(false); setRestockProduct(null) }}
+        product={restockProduct}
       />
 
       {/* Barcode scanner */}

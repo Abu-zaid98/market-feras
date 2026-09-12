@@ -146,7 +146,12 @@ export interface AccountBalances {
 
 export function useAccountBalances() {
   const balances = useLiveQuery(async () => {
-    const payments = await db.payments.toArray()
+    const [payments, purchases, expenses] = await Promise.all([
+      db.payments.toArray(),
+      db.purchases.toArray(),
+      db.expenses.toArray(),
+    ])
+
     const result: AccountBalances = {
       cash: 0,
       jawwal_pay: 0,
@@ -155,19 +160,37 @@ export function useAccountBalances() {
       total: 0,
     }
 
+    // ➕ INCOMING: money received from sales
     for (const p of payments) {
       const amt = Number(p.amount) || 0
       const method = p.method || 'cash'
-      if (method === 'jawwal_pay') {
-        result.jawwal_pay += amt
-      } else if (method === 'palpay') {
-        result.palpay += amt
-      } else if (method === 'bop') {
-        result.bop += amt
-      } else {
-        result.cash += amt
-      }
+      if (method === 'jawwal_pay') result.jawwal_pay += amt
+      else if (method === 'palpay') result.palpay += amt
+      else if (method === 'bop') result.bop += amt
+      else result.cash += amt
       result.total += amt
+    }
+
+    // ➖ OUTGOING: money paid for purchases/restocking
+    for (const pur of purchases) {
+      const amt = Number(pur.totalAmount) || 0
+      const method = pur.paymentMethod || 'cash'
+      if (method === 'jawwal_pay') result.jawwal_pay -= amt
+      else if (method === 'palpay') result.palpay -= amt
+      else if (method === 'bop') result.bop -= amt
+      else result.cash -= amt
+      result.total -= amt
+    }
+
+    // ➖ OUTGOING: money paid for operating expenses
+    for (const exp of expenses) {
+      const amt = Number(exp.amount) || 0
+      const method = exp.paymentMethod || 'cash'
+      if (method === 'jawwal_pay') result.jawwal_pay -= amt
+      else if (method === 'palpay') result.palpay -= amt
+      else if (method === 'bop') result.bop -= amt
+      else result.cash -= amt
+      result.total -= amt
     }
 
     return result

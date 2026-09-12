@@ -12,6 +12,7 @@ import { CustomersPage } from './pages/CustomersPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { InvoicesPage } from './pages/InvoicesPage'
+import { PurchasesPage } from './pages/PurchasesPage'
 
 function App() {
   const [authenticated, setAuthenticated] = useState(() => {
@@ -71,6 +72,7 @@ function App() {
         <Route element={<AppShell onLogout={handleLogout} />}>
           <Route path="/" element={<SalePage />} />
           <Route path="/products" element={<ProductsPage />} />
+          <Route path="/purchases" element={<PurchasesPage />} />
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />

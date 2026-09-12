@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom'
 import { exportBackup, importBackup, daysSinceBackup } from '../utils/backup'
 import { changePassword, hasPassword, setPassword } from '../utils/auth'
 import { getStoredTheme, applyTheme, type Theme } from '../utils/theme'
+import { usePWAInstall } from '../hooks/usePWAInstall'
 import { db } from '../db/db'
 import { Modal } from '../components/ui/Modal'
 
@@ -15,6 +16,16 @@ export function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>(getStoredTheme)
+
+  const {
+    canInstall,
+    isInstalled,
+    installApp,
+    isPersistent,
+    requestPersistence,
+    storageEstimate,
+  } = usePWAInstall()
+  const [persistLoading, setPersistLoading] = useState(false)
 
   const handleThemeChange = (t: Theme) => {
     applyTheme(t)
@@ -32,6 +43,21 @@ export function SettingsPage() {
 
   // Logout confirmation modal
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
+
+  // PWA guide modal
+  const [pwaGuideModalOpen, setPwaGuideModalOpen] = useState(false)
+  const [pwaGuideTab, setPwaGuideTab] = useState<'android' | 'ios'>('android')
+
+  const handleInstallClick = async () => {
+    if (canInstall) {
+      const success = await installApp()
+      if (!success) {
+        setPwaGuideModalOpen(true)
+      }
+    } else {
+      setPwaGuideModalOpen(true)
+    }
+  }
 
   const outlet = useOutletContext<{ onLogout?: () => void }>()
 
@@ -262,6 +288,193 @@ export function SettingsPage() {
           >
             ☀️ فاتح
           </button>
+        </div>
+      </div>
+
+      {/* PWA Installation Card */}
+      <div style={{
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 18,
+        padding: 20,
+        boxShadow: 'var(--shadow-sm)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>
+              📲 تثبيت التطبيق على الجهاز (PWA)
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4, margin: 0 }}>
+              تنزيل التطبيق للعمل كبرنامج مستقل على شاشة هاتفك أو حاسوبك بدون شريط المتصفح
+            </p>
+          </div>
+          {isInstalled && (
+            <span style={{
+              background: 'rgba(16,185,129,0.15)',
+              color: 'var(--color-success-light)',
+              border: '1px solid rgba(16,185,129,0.3)',
+              borderRadius: 20,
+              padding: '4px 10px',
+              fontSize: 11,
+              fontWeight: 800,
+            }}>
+              ✓ مثبت بالفعل
+            </span>
+          )}
+        </div>
+
+        {isInstalled ? (
+          <div style={{
+            background: 'rgba(16,185,129,0.1)',
+            border: '1.5px solid rgba(16,185,129,0.3)',
+            borderRadius: 14,
+            padding: '14px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}>
+            <span style={{ fontSize: 26 }}>✅</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--color-success-light)' }}>
+                التطبيق مثبت بالفعل على هذا الجهاز
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                يعمل الآن كبرنامج مستقل (Standalone) بسرعة فائقة وبدون اتصال بالإنترنت.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                border: 'none',
+                borderRadius: 14,
+                padding: '14px 20px',
+                color: 'white',
+                fontSize: 15,
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                boxShadow: '0 4px 16px rgba(59,130,246,0.35)',
+                fontFamily: 'var(--font-main)',
+                transition: 'all 0.18s ease',
+              }}
+            >
+              <span style={{ fontSize: 20 }}>📲</span>
+              <span>تثبيت التطبيق على الهاتف (PWA)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPwaGuideModalOpen(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-primary-light)',
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+                textAlign: 'center',
+                textDecoration: 'underline',
+                fontFamily: 'var(--font-main)',
+              }}
+            >
+              📖 كيف يتم تثبيت التطبيق على آيفون أو أندرويد يدوياً؟
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Device Storage & Data Protection Card */}
+      <div style={{
+        background: 'var(--color-bg-card)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 18,
+        padding: 20,
+        boxShadow: 'var(--shadow-sm)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+      }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>
+            💾 تخزين الهاتف وحماية البيانات (Storage)
+          </h3>
+          <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4, margin: 0 }}>
+            كافة المنتجات والفواتير مخزنة محلياً بالكامل على ذاكرة جهازك (IndexedDB) وتعمل Offline
+          </p>
+        </div>
+
+        {storageEstimate && (
+          <div style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: '12px 14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>المساحة المستهلكة من ذاكرة الهاتف:</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-primary-light)', marginTop: 2 }}>
+                {storageEstimate.usageMB} ميجابايت <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>/ {storageEstimate.quotaMB} ميجابايت سعة مخصصة</span>
+              </div>
+            </div>
+            <span style={{ fontSize: 24 }}>📱</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              حالة التخزين الدائم (Persistent Storage):
+            </div>
+            <div style={{ fontSize: 12, color: isPersistent ? 'var(--color-success-light)' : 'var(--color-warning-light)', marginTop: 2 }}>
+              {isPersistent
+                ? '✓ محمي: الهاتف لن يقوم بمسح قاعدة البيانات أبداً تلقائياً'
+                : '⚠️ تخزين عادي: قد يقوم المتصفح بمسح البيانات إذا امتلأت ذاكرة الهاتف بالكامل'}
+            </div>
+          </div>
+
+          {!isPersistent && (
+            <button
+              type="button"
+              disabled={persistLoading}
+              onClick={async () => {
+                setPersistLoading(true)
+                const ok = await requestPersistence()
+                setPersistLoading(false)
+                if (ok) {
+                  alert('✅ تم تفعيل التخزين الدائم وحماية قاعدة البيانات بنجاح!')
+                } else {
+                  alert('لم يتم منح الإذن التلقائي، قم بتثبيت التطبيق على الشاشة الرئيسية (PWA) ليتم تفعيله بأعلى درجة أمان.')
+                }
+              }}
+              style={{
+                background: 'rgba(59,130,246,0.15)',
+                border: '1px solid rgba(59,130,246,0.35)',
+                borderRadius: 10,
+                padding: '8px 14px',
+                color: 'var(--color-primary-light)',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-main)',
+              }}
+            >
+              {persistLoading ? 'جارٍ التفعيل...' : '🛡️ تفعيل الحماية الدائمة'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -717,6 +930,142 @@ export function SettingsPage() {
               🔒 تأكيد الخروج
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* PWA Install Guide Modal */}
+      <Modal
+        open={pwaGuideModalOpen}
+        onClose={() => setPwaGuideModalOpen(false)}
+        title="📲 تثبيت التطبيق على هاتفك"
+        type="box"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* OS Tabs */}
+          <div style={{
+            display: 'flex',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 12,
+            padding: 3,
+            gap: 4,
+          }}>
+            <button
+              type="button"
+              onClick={() => setPwaGuideTab('android')}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 9,
+                border: 'none',
+                background: pwaGuideTab === 'android' ? 'var(--color-primary)' : 'transparent',
+                color: pwaGuideTab === 'android' ? 'white' : 'var(--color-text-secondary)',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-main)',
+              }}
+            >
+              📱 أندرويد (Chrome)
+            </button>
+            <button
+              type="button"
+              onClick={() => setPwaGuideTab('ios')}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 9,
+                border: 'none',
+                background: pwaGuideTab === 'ios' ? 'var(--color-primary)' : 'transparent',
+                color: pwaGuideTab === 'ios' ? 'white' : 'var(--color-text-secondary)',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-main)',
+              }}
+            >
+              🍏 آيفون (Safari)
+            </button>
+          </div>
+
+          {pwaGuideTab === 'android' ? (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 12,
+              padding: '14px',
+              fontSize: 13,
+              lineHeight: 1.6,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>1️⃣</span>
+                <span>افتح التطبيق عبر متصفح <strong>Google Chrome</strong> على جوالك.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>2️⃣</span>
+                <span>اضغط على قائمة <strong>النقاط الثلاث (⋮)</strong> في أعلى يسار أو يمين الشاشة.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>3️⃣</span>
+                <span>اختر <strong>«تثبيت التطبيق»</strong> أو <strong>«إضافة إلى الشاشة الرئيسية»</strong>.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>✨</span>
+                <span>سيتم تنزيل أيقونة البرنامج لتفتحه مباشرة كأي تطبيق أصلي بدون إنترنت!</span>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 12,
+              padding: '14px',
+              fontSize: 13,
+              lineHeight: 1.6,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>1️⃣</span>
+                <span>افتح الرابط في متصفح <strong>Safari</strong> على الآيفون أو الآيباد.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>2️⃣</span>
+                <span>اضغط على زر المشاركة <strong>(Share) 📤</strong> في الشريط السفلي.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>3️⃣</span>
+                <span>مرر للأسفل واضغط على <strong>«إضافة إلى الصفحة الرئيسية» ➕</strong>.</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>4️⃣</span>
+                <span>اضغط <strong>«إضافة»</strong> في الزاوية وسيصبح التطبيق برنامجاً كاملاً على شاشتك.</span>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setPwaGuideModalOpen(false)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              borderRadius: 12,
+              border: 'none',
+              background: 'var(--color-primary)',
+              color: 'white',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-main)',
+            }}
+          >
+            فهمت، شكراً ✓
+          </button>
         </div>
       </Modal>
     </div>

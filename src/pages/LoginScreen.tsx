@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { verifyPassword, changePassword } from '../utils/auth'
+import { useState, useEffect } from 'react'
+import { verifyPassword, changePassword, hasPassword, setPassword } from '../utils/auth'
 import { getStoredTheme, toggleTheme, type Theme } from '../utils/theme'
 import { Modal } from '../components/ui/Modal'
 import { Button } from '../components/ui/Button'
@@ -15,6 +15,12 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
   const [isShaking, setIsShaking] = useState(false)
   const [theme, setTheme] = useState<Theme>(getStoredTheme)
 
+  // First-time setup state
+  const [checkingAuth, setCheckingAuth] = useState(true)
+  const [isFirstSetup, setIsFirstSetup] = useState(false)
+  const [setupStep, setSetupStep] = useState<'enter' | 'confirm'>('enter')
+  const [firstPin, setFirstPin] = useState('')
+
   // Change PIN modal state
   const [changePinOpen, setChangePinOpen] = useState(false)
   const [currentPin, setCurrentPin] = useState('')
@@ -23,6 +29,38 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
   const [changeError, setChangeError] = useState('')
   const [changeSuccess, setChangeSuccess] = useState(false)
   const [changingLoading, setChangingLoading] = useState(false)
+
+  useEffect(() => {
+    hasPassword()
+      .then((has) => {
+        setIsFirstSetup(!has)
+      })
+      .finally(() => {
+        setCheckingAuth(false)
+      })
+  }, [])
+
+  if (checkingAuth) {
+    return (
+      <div
+        className="login-screen"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 200,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--color-bg-base)',
+          gap: 12,
+        }}
+      >
+        <div style={{ fontSize: 32 }}>🏪</div>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>جارٍ التحقق...</p>
+      </div>
+    )
+  }
 
   const handleToggleTheme = () => {
     const next = toggleTheme()
@@ -41,7 +79,15 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
     }
 
     if (next.length === 6) {
-      setTimeout(() => handleSubmit(next), 120)
+      if (isFirstSetup) {
+        if (setupStep === 'enter') {
+          setTimeout(() => handleProceedSetupStep(next), 120)
+        } else {
+          setTimeout(() => handleFinishSetup(next), 120)
+        }
+      } else {
+        setTimeout(() => handleSubmit(next), 120)
+      }
     }
   }
 
@@ -55,6 +101,45 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
     if (loading) return
     setPasswordInput('')
     setError('')
+  }
+
+  const handleProceedSetupStep = (pin = password) => {
+    if (pin.length < 4) {
+      setError('يجب أن يتكون رمز الدخول من 4 إلى 6 أرقام')
+      return
+    }
+    setFirstPin(pin)
+    setPasswordInput('')
+    setError('')
+    setSetupStep('confirm')
+  }
+
+  const handleFinishSetup = async (pin = password) => {
+    if (pin.length < 4) {
+      setError('يرجى إدخال رمز التأكيد كاملاً')
+      return
+    }
+    if (pin !== firstPin) {
+      setIsShaking(true)
+      setError('الرمز غير متطابق! يرجى إعادة المحاولة')
+      setPasswordInput('')
+      setFirstPin('')
+      setSetupStep('enter')
+      setTimeout(() => setIsShaking(false), 500)
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    try {
+      await setPassword(pin)
+      onSuccess()
+    } catch (err) {
+      console.error(err)
+      setError('حدث خطأ أثناء حفظ الرمز الجديد')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (pin = password) => {
@@ -208,28 +293,58 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
       />
 
       {/* Header & App Brand */}
-      <div style={{ textAlign: 'center', marginBottom: 20, zIndex: 1 }}>
+      <div style={{ textAlign: 'center', marginBottom: 16, zIndex: 1, maxWidth: 320 }}>
         <div
           style={{
-            width: 72,
-            height: 72,
+            width: 68,
+            height: 68,
             background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-            borderRadius: 22,
+            borderRadius: 20,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 36,
-            margin: '0 auto 12px',
+            fontSize: 34,
+            margin: '0 auto 10px',
             boxShadow: '0 8px 30px rgba(59,130,246,0.35)',
           }}
         >
           🏪
         </div>
-        <h1 style={{ fontSize: 24, fontWeight: 900, letterSpacing: '-0.5px', color: 'var(--color-text-primary)' }}>
-          POS Market        </h1>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
-          أدخل رمز الدخول للمتابعة
-        </p>
+
+        {isFirstSetup ? (
+          <>
+            <div style={{
+              display: 'inline-block',
+              background: 'rgba(59,130,246,0.15)',
+              border: '1px solid rgba(59,130,246,0.35)',
+              color: 'var(--color-primary-light)',
+              padding: '4px 10px',
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 800,
+              marginBottom: 6,
+            }}>
+              👋 مرحباً بك — أول تشغيل للنظام
+            </div>
+            <h1 style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', color: 'var(--color-text-primary)' }}>
+              {setupStep === 'enter' ? 'أنشئ رمز دخولك الجديد' : 'تأكيد الرمز الجديد'}
+            </h1>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
+              {setupStep === 'enter'
+                ? 'أدخل 4 إلى 6 أرقام لتكون كلمة المرور الخاصة بك'
+                : 'أعد إدخال نفس الرمز للتأكيد وحفظه على جهازك'}
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 style={{ fontSize: 24, fontWeight: 900, letterSpacing: '-0.5px', color: 'var(--color-text-primary)' }}>
+              POS Market
+            </h1>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginTop: 4, fontWeight: 600 }}>
+              أدخل رمز الدخول للمتابعة
+            </p>
+          </>
+        )}
       </div>
 
       {/* PIN Dots Display */}
@@ -354,51 +469,109 @@ export function LoginScreen({ onSuccess }: LoginScreenProps) {
         })}
       </div>
 
-      {/* Submit Button (if 4 to 5 digits entered) */}
+      {/* Submit / Proceed Button */}
       <div style={{ width: '100%', maxWidth: 290, zIndex: 1, minHeight: 46 }}>
-        {password.length >= 4 && password.length < 6 ? (
-          <Button
-            variant="primary"
-            full
-            loading={loading}
-            onClick={() => handleSubmit()}
-            style={{ height: 46, borderRadius: 14, fontSize: 15 }}
-          >
-            دخول ➔
-          </Button>
+        {isFirstSetup ? (
+          setupStep === 'enter' ? (
+            password.length >= 4 ? (
+              <Button
+                variant="primary"
+                full
+                onClick={() => handleProceedSetupStep()}
+                style={{ height: 46, borderRadius: 14, fontSize: 15 }}
+              >
+                متابعة لتأكيد الرمز ➔
+              </Button>
+            ) : (
+              <div style={{ height: 46 }} />
+            )
+          ) : (
+            password.length >= 4 ? (
+              <Button
+                variant="primary"
+                full
+                loading={loading}
+                onClick={() => handleFinishSetup()}
+                style={{ height: 46, borderRadius: 14, fontSize: 15 }}
+              >
+                ✓ حفظ الرمز والدخول
+              </Button>
+            ) : (
+              <div style={{ height: 46 }} />
+            )
+          )
         ) : (
-          <div style={{ height: 46 }} />
+          password.length >= 4 && password.length < 6 ? (
+            <Button
+              variant="primary"
+              full
+              loading={loading}
+              onClick={() => handleSubmit()}
+              style={{ height: 46, borderRadius: 14, fontSize: 15 }}
+            >
+              دخول ➔
+            </Button>
+          ) : (
+            <div style={{ height: 46 }} />
+          )
         )}
       </div>
 
-      {/* Footer Option: Change PIN */}
+      {/* Footer Option: Change PIN or Back in setup */}
       <div style={{ marginTop: 8, zIndex: 1 }}>
-        <button
-          type="button"
-          onClick={() => {
-            setChangeError('')
-            setChangeSuccess(false)
-            setCurrentPin('')
-            setNewPin('')
-            setConfirmPin('')
-            setChangePinOpen(true)
-          }}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-text-muted)',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'var(--font-main)',
-            textDecoration: 'none',
-            padding: '6px 12px',
-            borderRadius: 8,
-            transition: 'color 0.15s ease',
-          }}
-        >
-          🔒 تغيير رمز الدخول
-        </button>
+        {isFirstSetup ? (
+          setupStep === 'confirm' && (
+            <button
+              type="button"
+              onClick={() => {
+                setSetupStep('enter')
+                setPasswordInput('')
+                setFirstPin('')
+                setError('')
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-primary-light)',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-main)',
+                padding: '6px 12px',
+                borderRadius: 8,
+              }}
+            >
+              ⮌ الرجوع لتعديل الرمز
+            </button>
+          )
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setChangeError('')
+              setChangeSuccess(false)
+              setCurrentPin('')
+              setNewPin('')
+              setConfirmPin('')
+              setChangePinOpen(true)
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-muted)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-main)',
+              textDecoration: 'none',
+              padding: '6px 12px',
+              borderRadius: 8,
+              transition: 'color 0.15s ease',
+            }}
+          >
+            🔒 تغيير رمز الدخول
+          </button>
+        )}
       </div>
 
       {/* Change PIN Modal */}

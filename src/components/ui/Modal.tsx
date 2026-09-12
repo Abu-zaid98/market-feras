@@ -6,9 +6,10 @@ interface ModalProps {
   title?: string
   children: React.ReactNode
   type?: 'sheet' | 'box'
+  footer?: React.ReactNode
 }
 
-export function Modal({ open, onClose, title, children, type = 'sheet' }: ModalProps) {
+export function Modal({ open, onClose, title, children, type = 'sheet', footer }: ModalProps) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -29,15 +30,19 @@ export function Modal({ open, onClose, title, children, type = 'sheet' }: ModalP
       className={`modal-backdrop ${type === 'box' ? 'center' : ''}`}
       onClick={handleBackdropClick}
     >
-      <div className={type === 'sheet' ? 'modal-sheet' : 'modal-box'}>
-        {type === 'sheet' && <div className="modal-drag-handle" />}
+      <div
+        className={type === 'sheet' ? 'modal-sheet' : 'modal-box'}
+        style={footer ? { display: 'flex', flexDirection: 'column', maxHeight: '90dvh', overflow: 'hidden' } : undefined}
+      >
+        {type === 'sheet' && <div className="modal-drag-handle" style={{ flexShrink: 0 }} />}
 
         {title && (
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: 20,
+            marginBottom: 16,
+            flexShrink: 0,
           }}>
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>{title}</h2>
             <button
@@ -61,7 +66,30 @@ export function Modal({ open, onClose, title, children, type = 'sheet' }: ModalP
           </div>
         )}
 
-        {children}
+        {footer ? (
+          <>
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: 10,
+              paddingRight: 2,
+              paddingLeft: 2,
+            }}>
+              {children}
+            </div>
+            <div style={{
+              flexShrink: 0,
+              paddingTop: 12,
+              borderTop: '1px solid var(--color-border)',
+              background: 'var(--color-bg-elevated)',
+            }}>
+              {footer}
+            </div>
+          </>
+        ) : (
+          children
+        )}
       </div>
     </div>
   )

@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 const NAV_ITEMS = [
   { path: '/', icon: '🛒', label: 'بيع', activeIcon: '🛒' },
-  { path: '/products', icon: '📦', label: 'منتجات', activeIcon: '📦' },
+  { path: '/products', icon: '📦', label: 'المخزون', activeIcon: '📦' },
   { path: '/customers', icon: '👥', label: 'عملاء', activeIcon: '👥' },
   { path: '/invoices', icon: '🧾', label: 'فواتير', activeIcon: '🧾' },
   { path: '/reports', icon: '📊', label: 'تقارير', activeIcon: '📊' },
@@ -17,7 +17,8 @@ export function BottomNav() {
     <nav className="bottom-nav">
       {NAV_ITEMS.map((item) => {
         const isActive = location.pathname === item.path ||
-          (item.path !== '/' && location.pathname.startsWith(item.path))
+          (item.path !== '/' && location.pathname.startsWith(item.path)) ||
+          (item.path === '/products' && location.pathname.startsWith('/purchases'))
 
         return (
           <button

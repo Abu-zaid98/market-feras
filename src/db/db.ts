@@ -88,6 +88,52 @@ export interface Setting {
   value: unknown
 }
 
+export interface Expense {
+  id?: number
+  title: string
+  category: string
+  amount: number
+  date: Date
+  paymentMethod?: PaymentMethod
+  notes?: string
+  createdAt: Date
+}
+
+export const EXPENSE_CATEGORIES = [
+  { id: 'electricity', name: 'كهرباء', icon: '⚡' },
+  { id: 'water', name: 'مياه', icon: '💧' },
+  { id: 'cleaning', name: 'نظافة ومستلزمات', icon: '🧹' },
+  { id: 'rent', name: 'إيجار المحل', icon: '🏪' },
+  { id: 'salaries', name: 'رواتب ومكافآت', icon: '👥' },
+  { id: 'maintenance', name: 'صيانة وتصليحات', icon: '🔧' },
+  { id: 'transport', name: 'نقل وتوصيل', icon: '🚚' },
+  { id: 'hospitality', name: 'ضيافة وبوفيه', icon: '☕' },
+  { id: 'other', name: 'أخرى', icon: '📦' },
+]
+
+export interface PurchaseItem {
+  productId: number
+  productName: string
+  barcode: string
+  quantity: number
+  oldQuantity: number
+  newQuantity: number
+  costPrice: number
+  totalCost: number
+}
+
+export interface Purchase {
+  id?: number
+  invoiceNumber?: string
+  supplierName?: string
+  items: PurchaseItem[]
+  totalAmount: number
+  paymentMethod?: PaymentMethod
+  date: Date
+  notes?: string
+  createdAt: Date
+}
+
 // ===========================
 // Database
 // ===========================
@@ -98,6 +144,8 @@ export class PosDatabase extends Dexie {
   invoices!: EntityTable<Invoice, 'id'>
   payments!: EntityTable<Payment, 'id'>
   settings!: EntityTable<Setting, 'key'>
+  expenses!: EntityTable<Expense, 'id'>
+  purchases!: EntityTable<Purchase, 'id'>
 
   constructor() {
     super('MallBilToulPOS')
@@ -122,6 +170,17 @@ export class PosDatabase extends Dexie {
       invoices: '++id, customerId, createdAt, paymentType, paymentMethod',
       payments: '++id, customerId, invoiceId, createdAt, method',
       settings: 'key',
+    })
+
+    // Version 4: add expenses and purchases stores
+    this.version(4).stores({
+      products: '++id, barcode, name, category',
+      customers: '++id, name, phone',
+      invoices: '++id, customerId, createdAt, paymentType, paymentMethod',
+      payments: '++id, customerId, invoiceId, createdAt, method',
+      settings: 'key',
+      expenses: '++id, category, date, paymentMethod, createdAt',
+      purchases: '++id, supplierName, date, createdAt',
     })
   }
 }

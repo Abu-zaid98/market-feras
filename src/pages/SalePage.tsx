@@ -227,7 +227,7 @@ export function SalePage() {
       ? 'دين كامل (آجل) 📝'
       : `${getPaymentMethodName(inv.paymentMethod)} ${inv.paymentType === 'partial' ? '(دفع جزئي)' : ''}`
 
-    let msg = `🧾 *فاتورة مبيعات — مول بالطول*\n`
+    let msg = `🧾 *فاتورة مبيعات *\n`
     msg += `رقم الفاتورة: #${inv.id}\n`
     msg += `التاريخ: ${dateStr}\n`
     if (inv.customerName) {
@@ -290,9 +290,17 @@ export function SalePage() {
       )}
 
       {/* Top Search + Barcode & Switch Tabs */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      {/* Top Search + Barcode & Switch Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: 6,
+        alignItems: 'center'
+      }}>
+
+        {/* Search */}
         <div style={{
-          flex: 1,
+          width: 250,
+          flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           gap: 6,
@@ -300,11 +308,14 @@ export function SalePage() {
           border: '1.5px solid var(--color-border)',
           borderRadius: 50,
           padding: '6px 12px',
+          boxSizing: 'border-box',
         }}>
           <span style={{ fontSize: 16 }}>🔍</span>
+
           <input
             style={{
               flex: 1,
+              minWidth: 0,
               background: 'transparent',
               border: 'none',
               outline: 'none',
@@ -316,16 +327,26 @@ export function SalePage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+
           {search && (
             <button
               onClick={() => setSearch('')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', fontSize: 16 }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-text-muted)',
+                fontSize: 16,
+                padding: 0,
+                flexShrink: 0,
+              }}
             >
               ✕
             </button>
           )}
         </div>
 
+        {/* Barcode Scanner */}
         <button
           onClick={() => setScannerOpen(true)}
           title="مسح باركود بالكاميرا"
@@ -353,7 +374,10 @@ export function SalePage() {
           borderRadius: 12,
           padding: 3,
           border: '1px solid var(--color-border)',
+          flexShrink: 0,
         }}>
+
+          {/* Catalog Tab */}
           <button
             onClick={() => setActiveTab('catalog')}
             style={{
@@ -364,14 +388,22 @@ export function SalePage() {
               fontWeight: 700,
               fontSize: 12,
               fontFamily: 'var(--font-main)',
-              background: activeTab === 'catalog' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'catalog' ? 'white' : 'var(--color-text-muted)',
+              background:
+                activeTab === 'catalog'
+                  ? 'var(--color-primary)'
+                  : 'transparent',
+              color:
+                activeTab === 'catalog'
+                  ? 'white'
+                  : 'var(--color-text-muted)',
               transition: 'all 0.15s ease',
               whiteSpace: 'nowrap',
             }}
           >
-            📦 الأصناف
+            📦 المنتجات
           </button>
+
+          {/* Cart Tab */}
           <button
             onClick={() => setActiveTab('cart')}
             style={{
@@ -382,8 +414,14 @@ export function SalePage() {
               fontWeight: 700,
               fontSize: 12,
               fontFamily: 'var(--font-main)',
-              background: activeTab === 'cart' ? 'var(--color-primary)' : 'transparent',
-              color: activeTab === 'cart' ? 'white' : 'var(--color-text-muted)',
+              background:
+                activeTab === 'cart'
+                  ? 'var(--color-primary)'
+                  : 'transparent',
+              color:
+                activeTab === 'cart'
+                  ? 'white'
+                  : 'var(--color-text-muted)',
               display: 'flex',
               alignItems: 'center',
               gap: 4,
@@ -392,10 +430,17 @@ export function SalePage() {
             }}
           >
             🛒 السلة
+
             {totalCartCount > 0 && (
               <span style={{
-                background: activeTab === 'cart' ? 'white' : 'var(--color-primary)',
-                color: activeTab === 'cart' ? 'var(--color-primary)' : 'white',
+                background:
+                  activeTab === 'cart'
+                    ? 'white'
+                    : 'var(--color-primary)',
+                color:
+                  activeTab === 'cart'
+                    ? 'var(--color-primary)'
+                    : 'white',
                 fontSize: 11,
                 fontWeight: 800,
                 borderRadius: 50,
@@ -405,6 +450,7 @@ export function SalePage() {
               </span>
             )}
           </button>
+
         </div>
       </div>
 

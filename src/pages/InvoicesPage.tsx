@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CustomSelect } from '../components/ui/CustomSelect'
 import { Modal } from '../components/ui/Modal'
+import { ConfirmModal } from '../components/ui/ConfirmModal'
 import { type Invoice, type PaymentMethod, type PaymentType } from '../db/db'
 import { useCustomers } from '../hooks/useCustomers'
 import { deleteInvoice, updateInvoiceDetails, useInvoices } from '../hooks/useInvoices'
@@ -19,6 +20,8 @@ export function InvoicesPage() {
   const [filter, setFilter] = useState<InvoiceFilter>('all')
   const [selected, setSelected] = useState<Invoice | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [editing, setEditing] = useState<{
     customerId: number | null; paymentType: PaymentType; paymentMethod: PaymentMethod; paidAmount: string; note: string
   } | null>(null)
@@ -69,10 +72,24 @@ export function InvoicesPage() {
     } finally { setSaving(false) }
   }
 
-  const remove = async () => {
-    if (!selected?.id || !confirm(`حذف الفاتورة #${selected.id}؟ سيُعاد المخزون وتُصحح أرصدة العميل.`)) return
-    await deleteInvoice(selected.id)
-    setSelected(null)
+  const remove = () => {
+    if (!selected?.id) return
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!selected?.id) return
+    setDeleting(true)
+    try {
+      await deleteInvoice(selected.id)
+      setDeleteConfirmOpen(false)
+      setSelected(null)
+    } catch (err) {
+      console.error(err)
+      alert('حدث خطأ أثناء حذف الفاتورة')
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -113,8 +130,22 @@ export function InvoicesPage() {
         {(editing.paymentType === 'debt' || editing.paymentType === 'partial') && <CustomSelect value={editing.customerId} placeholder="اختر العميل" label="العميل" onChange={(customerId) => setEditing((current) => current && ({ ...current, customerId }))} options={customers.filter((customer) => customer.id !== undefined).map((customer) => ({ value: customer.id!, label: customer.name, description: customer.totalDebt > 0 ? `رصيده: ${formatCurrency(customer.totalDebt)}` : undefined }))} />}
         {editing.paymentType !== 'debt' && <><CustomSelect value={editing.paymentMethod} label="طريقة القبض" onChange={(paymentMethod) => setEditing((current) => current && ({ ...current, paymentMethod }))} options={[{ value: 'cash' as PaymentMethod, label: '💵 نقداً' }, { value: 'jawwal_pay' as PaymentMethod, label: '📱 جوال باي' }, { value: 'palpay' as PaymentMethod, label: '💳 بال باي' }, { value: 'bop' as PaymentMethod, label: '🏦 بنك فلسطين' }]} />{editing.paymentType === 'partial' && <div className="input-wrap"><label className="input-label">المبلغ المقبوض</label><input className="input" type="number" min="0" max={selected.total} value={editing.paidAmount} onChange={(event) => setEditing((current) => current && ({ ...current, paidAmount: event.target.value }))} /></div>}</>}
         <div className="input-wrap"><label className="input-label">ملاحظة</label><textarea className="input" rows={2} value={editing.note} onChange={(event) => setEditing((current) => current && ({ ...current, note: event.target.value }))} /></div>
-        <div style={{ display: 'flex', gap: 8 }}><button type="button" className="btn btn-danger" style={{ paddingInline: 14 }} onClick={remove}>🗑️</button><button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={save} disabled={saving}>{saving ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}</button></div>
+        <div style={{ display: 'flex', gap: 8 }}><button type="button" className="btn btn-danger" style={{ paddingInline: 14 }} onClick={remove} title="حذف الفاتورة">🗑️</button><button type="button" className="btn btn-primary" style={{ flex: 1 }} onClick={save} disabled={saving}>{saving ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}</button></div>
       </div></Modal>}
+
+      {/* Delete Invoice Confirmation Modal */}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+        title="حذف فاتورة المبيعات"
+        icon="🧾"
+        message={`هل أنت متأكد من حذف الفاتورة #${selected?.id}؟`}
+        subMessage="سيتم إرجاع كافة الأصناف إلى المخزن وإلغاء أو تعديل أي ديون مرتبطة بهذه الفاتورة تلقائياً."
+        confirmText="تأكيد الحذف"
+        cancelText="إلغاء"
+      />
     </div>
   )
 }
