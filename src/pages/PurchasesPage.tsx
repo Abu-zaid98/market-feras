@@ -153,7 +153,7 @@ export function PurchasesPage() {
   }
 
   return (
-    <div style={{ padding: '16px', paddingBottom: '80px' }}>
+    <div style={{ paddingBottom: '80px' }}>
       {/* Top Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
         <div style={{
@@ -550,7 +550,7 @@ export function PurchasesPage() {
             </h3>
 
             {/* Search / Scan bar / Add Product button */}
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 4 }}>
               <div style={{
                 flex: 1,
                 display: 'flex',
@@ -559,7 +559,7 @@ export function PurchasesPage() {
                 background: 'rgba(255,255,255,0.05)',
                 border: '1.5px solid var(--color-border)',
                 borderRadius: 12,
-                padding: '8px 14px',
+                padding: '8px 8px',
               }}>
                 <span>🔍</span>
                 <input
@@ -620,23 +620,23 @@ export function PurchasesPage() {
                 title="إضافة صنف جديد تماماً إلى المخزن وإدراجه بالفاتورة"
                 style={{
                   height: 44,
-                  padding: '0 12px',
+                  padding: '0 4px',
                   background: 'rgba(16, 185, 129, 0.15)',
                   border: '1px solid rgba(16, 185, 129, 0.35)',
                   color: 'var(--color-success-light)',
                   borderRadius: 12,
                   cursor: 'pointer',
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 5,
+                  gap: 3,
                   whiteSpace: 'nowrap',
                   fontFamily: 'var(--font-main)',
                 }}
               >
                 <span>➕</span>
-                <span>صنف جديد</span>
+                <span>جديد</span>
               </button>
             </div>
 

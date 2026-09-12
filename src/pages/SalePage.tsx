@@ -299,7 +299,7 @@ export function SalePage() {
 
         {/* Search */}
         <div style={{
-          width: 250,
+          width: '40%',
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
@@ -351,7 +351,7 @@ export function SalePage() {
           onClick={() => setScannerOpen(true)}
           title="مسح باركود بالكاميرا"
           style={{
-            width: 38,
+            width: 42,
             height: 38,
             background: 'rgba(59,130,246,0.15)',
             border: '1.5px solid rgba(59,130,246,0.35)',
