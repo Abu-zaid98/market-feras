@@ -458,17 +458,18 @@ export function CustomersPage() {
                       flex: 1,
                       padding: '8px 12px',
                       borderRadius: 10,
-                      background: hasDebt ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.06)',
-                      border: 'none',
-                      color: 'white',
+                      background: 'linear-gradient(135deg, #10b981, #059669)',
+                      border: '1px solid rgba(16,185,129,0.5)',
+                      color: '#ffffff',
                       fontSize: 13,
-                      fontWeight: 700,
+                      fontWeight: 800,
                       cursor: 'pointer',
                       fontFamily: 'var(--font-main)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 4,
+                      boxShadow: '0 6px 18px rgba(16,185,129,0.22)',
                     }}
                   >
                     <span>💰</span>
