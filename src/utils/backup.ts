@@ -24,7 +24,7 @@ export async function exportBackup(): Promise<void> {
   const a = document.createElement('a')
   a.href = url
   const date = new Date().toISOString().split('T')[0]
-  a.download = `mall-biltoul-backup-${date}.json`
+  a.download = `pos-system-backup-${date}.json`
   a.click()
   URL.revokeObjectURL(url)
 

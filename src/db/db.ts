@@ -22,6 +22,7 @@ export interface Customer {
   name: string
   phone: string
   totalDebt: number
+  creditBalance?: number
   createdAt: Date
 }
 
@@ -174,6 +175,17 @@ export class PosDatabase extends Dexie {
 
     // Version 4: add expenses and purchases stores
     this.version(4).stores({
+      products: '++id, barcode, name, category',
+      customers: '++id, name, phone',
+      invoices: '++id, customerId, createdAt, paymentType, paymentMethod',
+      payments: '++id, customerId, invoiceId, createdAt, method',
+      settings: 'key',
+      expenses: '++id, category, date, paymentMethod, createdAt',
+      purchases: '++id, supplierName, date, createdAt',
+    })
+
+    // Version 5: add optional customer credit balance while keeping debt logic intact.
+    this.version(5).stores({
       products: '++id, barcode, name, category',
       customers: '++id, name, phone',
       invoices: '++id, customerId, createdAt, paymentType, paymentMethod',

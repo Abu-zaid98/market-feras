@@ -25,6 +25,33 @@ export function useCustomers(searchTerm = '', filter: 'all' | 'debt' | 'settled'
   return customers ?? []
 }
 
+export function normalizeCustomerBalance(currentDebt: number, currentCredit: number, delta: number) {
+  const debt = Math.max(0, Number(currentDebt) || 0)
+  const credit = Math.max(0, Number(currentCredit) || 0)
+
+  if (delta > 0) {
+    const usedCredit = Math.min(credit, delta)
+    const remainingDebt = delta - usedCredit
+    return {
+      totalDebt: debt + remainingDebt,
+      creditBalance: credit - usedCredit,
+    }
+  }
+
+  const amountToApply = Math.abs(delta)
+  if (amountToApply <= debt) {
+    return {
+      totalDebt: debt - amountToApply,
+      creditBalance: credit,
+    }
+  }
+
+  return {
+    totalDebt: 0,
+    creditBalance: credit + (amountToApply - debt),
+  }
+}
+
 export async function addCustomer(data: { name: string; phone?: string; initialDebt?: number }): Promise<number> {
   const initialDebt = Number(data.initialDebt) || 0
   const customerId = await db.transaction('rw', [db.customers, db.invoices], async () => {
@@ -32,6 +59,7 @@ export async function addCustomer(data: { name: string; phone?: string; initialD
       name: data.name.trim(),
       phone: data.phone?.trim() ?? '',
       totalDebt: initialDebt,
+      creditBalance: 0,
       createdAt: new Date(),
     })
 
@@ -93,7 +121,9 @@ export async function addCustomerDebt(data: { customerId: number; amount: number
       note,
       createdAt: new Date(),
     })
-    await db.customers.update(data.customerId, { totalDebt: (customer.totalDebt || 0) + amount })
+
+    const nextBalance = normalizeCustomerBalance(customer.totalDebt || 0, customer.creditBalance || 0, amount)
+    await db.customers.update(data.customerId, nextBalance)
   })
 }
 
@@ -130,7 +160,8 @@ export async function updateInitialDebt(customerId: number, amount: number) {
       })
     }
     if (difference !== 0) {
-      await db.customers.update(customerId, { totalDebt: Math.max(0, (customer.totalDebt || 0) + difference) })
+      const nextBalance = normalizeCustomerBalance(customer.totalDebt || 0, customer.creditBalance || 0, difference)
+      await db.customers.update(customerId, nextBalance)
     }
   })
 }
@@ -150,8 +181,9 @@ export async function deleteCustomer(
     const customer = await db.customers.get(id)
     if (!customer) return { blocked: false }
 
-    // Block deletion if the customer still has debt (unless force-deleting)
-    if (!forceDelete && (customer.totalDebt || 0) > 0) {
+    // Block deletion if the customer still has debt or an outstanding credit balance.
+    const hasBalance = (customer.totalDebt || 0) > 0 || (customer.creditBalance || 0) > 0
+    if (!forceDelete && hasBalance) {
       return { blocked: true }
     }
 
@@ -249,8 +281,8 @@ export async function recordPayment(data: {
     const customer = await db.customers.get(customerId)
     if (!customer) throw new Error('Customer not found')
 
-    const newDebt = Math.max(0, (customer.totalDebt || 0) - amount)
-    await db.customers.update(customerId, { totalDebt: newDebt })
+    const nextBalance = normalizeCustomerBalance(customer.totalDebt || 0, customer.creditBalance || 0, -amount)
+    await db.customers.update(customerId, nextBalance)
 
     const methodName = getPaymentMethodName(method)
     await db.payments.add({

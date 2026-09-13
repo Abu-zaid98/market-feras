@@ -56,7 +56,8 @@ export async function verifyPassword(password: string): Promise<boolean> {
 }
 
 /**
- * Reset password (clears stored hash so system requires first-time setup)
+ * Reset password (clears only the saved PIN/hash so the app returns to first-time setup)
+ * This does not delete customer data, inventory, invoices, or any other app records.
  */
 export async function resetToDefaultPassword(): Promise<void> {
   try {

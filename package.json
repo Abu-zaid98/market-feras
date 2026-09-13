@@ -1,5 +1,6 @@
 {
-  "name": "mall-biltoul-pos",
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "pos-system",
   "version": "1.0.0",
   "private": true,
   "type": "module",

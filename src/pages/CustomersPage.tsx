@@ -376,6 +376,7 @@ export function CustomersPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {customers.map((c) => {
             const hasDebt = (c.totalDebt || 0) > 0
+            const hasCredit = (c.creditBalance || 0) > 0
             const cleanPhone = c.phone?.replace(/\D/g, '')
 
             return (
@@ -427,18 +428,18 @@ export function CustomersPage() {
                     <div style={{
                       padding: '4px 12px',
                       borderRadius: 50,
-                      background: hasDebt ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
-                      border: hasDebt ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)',
-                      color: hasDebt ? 'var(--color-danger-light)' : 'var(--color-success-light)',
+                      background: hasDebt ? 'rgba(239,68,68,0.15)' : hasCredit ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)',
+                      border: hasDebt ? '1px solid rgba(239,68,68,0.3)' : hasCredit ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(16,185,129,0.3)',
+                      color: hasDebt ? 'var(--color-danger-light)' : hasCredit ? 'var(--color-primary-light)' : 'var(--color-success-light)',
                       fontWeight: 800,
                       fontSize: 14,
                       direction: 'ltr',
                       display: 'inline-block',
                     }}>
-                      {formatCurrency(c.totalDebt || 0)}
+                      {formatCurrency(hasDebt ? c.totalDebt || 0 : hasCredit ? -(c.creditBalance || 0) : 0)}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2, textAlign: 'right' }}>
-                      {hasDebt ? 'مبلغ الدين' : 'حساب خالص ✓'}
+                      {hasDebt ? 'مبلغ الدين' : hasCredit ? 'رصيد زائد' : 'حساب خالص ✓'}
                     </div>
                   </div>
                 </div>
@@ -714,6 +715,9 @@ export function CustomersPage() {
               <span style={{ fontSize: 14, fontWeight: 700 }}>{paymentCustomer.name}</span>
               <span style={{ fontSize: 13, color: 'var(--color-danger-light)', fontWeight: 800, direction: 'ltr' }}>
                 الدين الحالي: {formatCurrency(paymentCustomer.totalDebt || 0)}
+                {(paymentCustomer.creditBalance || 0) > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--color-primary-light)', marginTop: 4 }}>رصيد زائد: {formatCurrency(paymentCustomer.creditBalance || 0)}</div>
+                )}
               </span>
             </div>
 

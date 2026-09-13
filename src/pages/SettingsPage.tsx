@@ -183,8 +183,56 @@ export function SettingsPage() {
     }
   }
 
+  const openDeveloperWhatsApp = () => {
+    const phone = '972592133357'
+    const message = encodeURIComponent('السلام عليكم، أحتاج المساعدة بشأن النظام.')
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <div style={{ padding: '16px', maxWidth: 640, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        flexWrap: 'wrap',
+        padding: '2px 2px 0',
+      }}>
+        <div style={{
+          color: 'var(--color-text-muted)',
+          fontSize: 11,
+          fontWeight: 700,
+          textAlign: 'center',
+        }}>
+          تم التطوير بواسطة المهندس محمد الجوجو
+        </div>
+
+        <button
+          type="button"
+          onClick={openDeveloperWhatsApp}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '7px 12px',
+            borderRadius: 999,
+            border: '1px solid rgba(34,197,94,0.35)',
+            background: 'rgba(34,197,94,0.1)',
+            color: '#4ade80',
+            fontWeight: 800,
+            fontSize: 11,
+            cursor: 'pointer',
+            fontFamily: 'var(--font-main)',
+            boxShadow: '0 4px 12px rgba(34,197,94,0.08)',
+          }}
+        >
+          <span>💬</span>
+          <span>واتساب</span>
+        </button>
+      </div>
+
       {/* Store Header Card */}
       <div style={{
         background: 'var(--color-bg-card)',
@@ -216,7 +264,7 @@ export function SettingsPage() {
             {storeName || 'POS System'}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-            نظام نقطة البيع وإدارة الديون (POS & Debt PWA)
+            نظام نقطة البيع وإدارة الديون (POS & Debt)
           </p>
         </div>
       </div>
@@ -308,7 +356,7 @@ export function SettingsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>
-              📲 تثبيت التطبيق على الجهاز (PWA)
+              📲 تثبيت التطبيق على الجهاز
             </h3>
             <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4, margin: 0 }}>
               تنزيل التطبيق للعمل كبرنامج مستقل على شاشة هاتفك أو حاسوبك بدون شريط المتصفح
@@ -373,7 +421,7 @@ export function SettingsPage() {
               }}
             >
               <span style={{ fontSize: 20 }}>📲</span>
-              <span>تثبيت التطبيق على الهاتف (PWA)</span>
+              <span>تثبيت التطبيق على الهاتف </span>
             </button>
 
             <button
@@ -460,7 +508,7 @@ export function SettingsPage() {
                 if (ok) {
                   alert('✅ تم تفعيل التخزين الدائم وحماية قاعدة البيانات بنجاح!')
                 } else {
-                  alert('لم يتم منح الإذن التلقائي، قم بتثبيت التطبيق على الشاشة الرئيسية (PWA) ليتم تفعيله بأعلى درجة أمان.')
+                  alert('لم يتم منح الإذن التلقائي، قم بتثبيت التطبيق على الشاشة الرئيسية ليتم تفعيله بأعلى درجة أمان.')
                 }
               }}
               style={{
